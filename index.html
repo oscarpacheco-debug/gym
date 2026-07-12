@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GymGym">
-<title>GymGym</title>
+<meta name="apple-mobile-web-app-title" content="Gimnasio">
+<title>Gimnasio</title>
 <style>
 :root{
   --bg:#0D0F14;--surface:#13161C;--card:#1A1D25;--border:#252830;
@@ -20,7 +20,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;color:var(--text)}
 #app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;background:var(--bg)}
-#content{flex:1;overflow-y:auto;padding-bottom:calc(var(--tab)+8px);scrollbar-width:none}
+#content{flex:1;overflow-y:auto;padding-bottom:calc(var(--tab)+32px);scrollbar-width:none}
 #content::-webkit-scrollbar{display:none}
 
 /* TABBAR */
@@ -80,7 +80,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .w-idle{padding:20px 16px}
 .w-picker{padding:20px 16px}
 .w-pre{padding:20px 16px}
-.w-active{display:none;flex-direction:column;min-height:calc(100dvh - var(--tab))}
+.w-active{display:none;flex-direction:column;min-height:calc(100dvh - var(--tab));overflow-y:auto;padding-bottom:calc(var(--tab)+16px)}
 .w-active.show{display:flex}
 
 /* SESSION PICKER */
@@ -168,7 +168,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .done-back{width:100%;padding:14px;background:var(--amber);color:#0D0F14;border:none;border-radius:var(--radius);font-size:15px;font-weight:800;cursor:pointer}
 
 /* WORKOUT CONTROLS */
-.w-ctrl{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px}
+.w-ctrl{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;position:sticky;bottom:0;background:var(--bg);z-index:10}
 .ctrl{flex:1;padding:12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:700;cursor:pointer}
 .ctrl.primary{background:var(--amber);color:#0D0F14;border-color:var(--amber)}
 
@@ -447,7 +447,7 @@ const EXERCISES={
 const SESSIONS={
   upper:{name:'Upper Body',emoji:'🟦',color:'#3B82F6',duration:'35-40 min',exercises:['chest_press','lat_pulldown','dy_row','shoulder_press','plank'],warmup:'Cinta 5 min'},
   lower:{name:'Lower Body',emoji:'🟩',color:'#4ADE80',duration:'35-40 min',exercises:['leg_press','leg_curl','leg_ext','hip_thrust','side_plank'],warmup:'Cinta 5 min'},
-  full:{name:'Full Body',emoji:'🟨',color:'#F5A623',duration:'40-45 min',exercises:['leg_press','chest_press','lat_pulldown','shoulder_press','leg_curl','plank'],warmup:'Cinta 5 min'},
+  full:{name:'Full Body',emoji:'🟨',color:'#F5A623',duration:'40-45 min',exercises:['leg_press','chest_press','lat_pulldown','leg_curl','shoulder_press','plank'],warmup:'Cinta 5 min'},
 };
 
 const POST_WORKOUT_FOOD={
@@ -1023,14 +1023,39 @@ function moveEx(idx,dir){
 function applyReorder(){
   hideModal('reorder-modal');
   if(sessionStartTime){
-    // mid-session: just re-render current exercise (order already updated)
     renderCurrentExercise();
   }else{
-    // pre-session: refresh the pre-list
+    // Save order before startSession wipes it
+    const savedOrder=sessionExOrder[currentSession]?[...sessionExOrder[currentSession]]:null;
     startSession(currentSession);
+    // Restore order after startSession
+    if(savedOrder)sessionExOrder[currentSession]=savedOrder;
+    renderPreList();
     document.getElementById('pre-session').style.display='block';
     document.getElementById('ex-body').style.display='none';
   }
+}
+
+function renderPreList(){
+  const type=currentSession;
+  const currentOrder=sessionExOrder[type]||SESSIONS[type].exercises;
+  const rows=currentOrder.map(id=>{
+    const ex=EXERCISES[id];
+    const w=getCurrentWeight(id);
+    const target=getNextTarget(id);
+    const level=getLevel(id);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:14px;font-weight:600">${ex.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${ex.isTime?ex.startTime+'s':w+'kg'} · ${target}</div>
+      </div>
+      <div class="level-badge"><span>LV ${level}</span></div>
+    </div>`;
+  }).join('');
+  document.getElementById('pre-list').innerHTML=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button onclick="showReorderModal()" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rsm);padding:6px 12px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">⇅ Reordenar</button>
+    </div>${rows}`;
 }
 
 // ─── PROGRESO ─────────────────────────────────────────────────────────────────

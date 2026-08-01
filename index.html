@@ -168,7 +168,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .done-back{width:100%;padding:14px;background:var(--amber);color:#0D0F14;border:none;border-radius:var(--radius);font-size:15px;font-weight:800;cursor:pointer}
 
 /* WORKOUT CONTROLS */
-.w-ctrl{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;background:var(--bg)}
+.w-ctrl{padding:12px 16px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;background:var(--bg);box-shadow:0 -4px 12px rgba(0,0,0,.3)}
 .ctrl{flex:1;padding:12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:700;cursor:pointer}
 .ctrl.primary{background:var(--amber);color:#0D0F14;border-color:var(--amber)}
 
@@ -309,6 +309,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
           </div>
           <div class="rest-next-lbl">Siguiente ejercicio</div>
           <div class="rest-next-name" id="rest-next-name">—</div>
+          <div id="rest-upcoming-chips" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px;max-width:320px"></div>
           <button class="skip-btn" onclick="skipRest()">Saltar</button>
         </div>
         <div class="done-scr" id="done-scr">
@@ -480,7 +481,7 @@ const EXERCISES={
   chest_press:{id:'chest_press',name:'Chest Press',emoji:'🏋️',startWeight:20,muscles:[{name:'Pecho',pct:85,color:'#F5A623'},{name:'Tríceps',pct:50,color:'#3B82F6'},{name:'Hombro',pct:25,color:'#A78BFA'}],tip:'Agarra las asas a la altura del pecho. Empuja hacia adelante expirando, baja controlado en 3 segundos. No bloquees los codos arriba del todo — mantén tensión.',alts:[]},
   lat_pulldown:{id:'lat_pulldown',name:'Lat Pulldown',emoji:'💪',startWeight:25,muscles:[{name:'Espalda',pct:90,color:'#F5A623'},{name:'Bíceps',pct:55,color:'#3B82F6'},{name:'Core',pct:20,color:'#4ADE80'}],tip:'Agarre ligeramente más ancho que los hombros. Tira del pecho, no de la barbilla. Al bajar, aprieta los omóplatos hacia abajo y atrás. Sube controlado.',alts:['Vertical Traction','Seated Row']},
   dy_row:{id:'dy_row',name:'Iso-Lateral DY Row',emoji:'🔙',startWeight:20,muscles:[{name:'Espalda',pct:85,color:'#F5A623'},{name:'Bíceps',pct:60,color:'#3B82F6'},{name:'Hombro posterior',pct:30,color:'#A78BFA'}],tip:'Inclínate ligeramente hacia adelante. Tira del codo hacia atrás, no hacia arriba. Aprieta la espalda al final del movimiento. Alterna lados o usa ambos a la vez.',alts:['Seated Row','Cable Row']},
-  shoulder_press:{id:'shoulder_press',name:'Shoulder Press',emoji:'🙆',startWeight:5,muscles:[{name:'Hombro',pct:90,color:'#F5A623'},{name:'Tríceps',pct:40,color:'#3B82F6'},{name:'Trapecios',pct:25,color:'#A78BFA'}],tip:'Asiento ajustado para que los codos estén a 90° al inicio. Empuja hacia arriba sin arquear la espalda baja. Sube hasta casi estirar los brazos, baja controlado.',alts:['Dumbbell Press','Smith Machine Press']},
+  shoulder_press:{id:'shoulder_press',name:'Shoulder Press',emoji:'🙆',startWeight:5,muscles:[{name:'Hombro',pct:90,color:'#F5A623'},{name:'Tríceps',pct:40,color:'#3B82F6'},{name:'Trapecios',pct:25,color:'#A78BFA'}],tip:'Asiento ajustado para que los codos estén a 90° al inicio. Empuja hacia arriba sin arquear la espalda baja. Sube hasta casi estirar los brazos, baja controlado.',alts:['Delta Machine','Dumbbell Press','Lateral Raises Machine']},
   plank:{id:'plank',name:'Plank',emoji:'🧘',startWeight:0,isTime:true,startTime:40,muscles:[{name:'Core',pct:95,color:'#F5A623'},{name:'Glúteos',pct:30,color:'#3B82F6'},{name:'Hombros',pct:25,color:'#A78BFA'}],tip:'Codos bajo los hombros. Cuerpo en línea recta de cabeza a talones. Activa el abdomen como si fueras a recibir un golpe. Respira sin aguantar el aliento.',alts:['Dead Bug','Hollow Hold']},
   leg_press:{id:'leg_press',name:'Leg Press',emoji:'🦵',startWeight:40,muscles:[{name:'Cuádriceps',pct:85,color:'#F5A623'},{name:'Glúteos',pct:60,color:'#3B82F6'},{name:'Isquiotibiales',pct:35,color:'#4ADE80'}],tip:'Pies a la anchura de los hombros en la plataforma. Baja hasta 90° de rodilla (no más). Empuja con los talones. No bloquees las rodillas arriba.',alts:['Hack Squat','Belt Squat']},
   leg_curl:{id:'leg_curl',name:'Seated Leg Curl',emoji:'🦿',startWeight:20,muscles:[{name:'Isquiotibiales',pct:90,color:'#F5A623'},{name:'Gemelos',pct:30,color:'#3B82F6'}],tip:'Ajusta el rodillo para que quede justo encima del tobillo. Tira controlado hacia abajo, aguanta 1 segundo abajo. Sube lento en 3 segundos.',alts:['Lying Leg Curl','Romanian Deadlift']},
@@ -577,14 +578,37 @@ function getLastSets(exId){
   if(hist.length>0)return hist[hist.length-1].sets||[];
   return[];
 }
+// Returns the weight to pre-load for next session
+// If last session was 3×12 with RPE ≤ normal → auto-advance weight
+function getSuggestedWeight(exId){
+  const ex=EXERCISES[exId];
+  if(ex&&ex.isTime)return 0;
+  const hist=exHistory[exId]||[];
+  if(!hist.length)return ex.startWeight||0;
+  const last=hist[hist.length-1];
+  const sets=last.sets||[];
+  const realSets=sets.filter(Boolean);
+  if(realSets.length<3)return last.weight;
+  const allReps=realSets.map(s=>s.reps||0);
+  const minReps=Math.min(...allReps);
+  const avgRpe=realSets.reduce((a,s)=>a+(s.rpe||1),0)/realSets.length;
+  // 3×12 with RPE easy or normal → suggest +2.5kg
+  if(minReps>=12&&avgRpe<=1.5)return last.weight+2.5;
+  return last.weight;
+}
 function getNextTarget(exId){
   const ex=EXERCISES[exId];
   if(ex&&ex.isTime)return'3×'+((ex.startTime||30)+5)+'s';
   const last=getLastSets(exId);
   if(!last.length)return'3×10';
-  const allReps=last.map(s=>s.reps||0);
-  const minReps=Math.min(...allReps);
-  if(minReps>=12)return'⬆️ Sube peso';
+  const realSets=last.filter(Boolean);
+  const allReps=realSets.map(s=>s.reps||0);
+  const minReps=allReps.length?Math.min(...allReps):0;
+  const avgRpe=realSets.reduce((a,s)=>a+(s.rpe||1),0)/Math.max(realSets.length,1);
+  const suggested=getSuggestedWeight(exId);
+  const current=getCurrentWeight(exId);
+  if(minReps>=12&&avgRpe<=1.5)return`⬆️ ${suggested}kg próxima vez`;
+  if(minReps>=12)return'3×12 — consolida peso';
   if(minReps>=11)return'3×12';
   if(minReps>=10)return'3×11';
   return'3×10';
@@ -638,11 +662,12 @@ function renderDashboard(){
   const exRows=sess.exercises.map(id=>{
     const ex=EXERCISES[id];
     const w=getCurrentWeight(id);
+    const sugW=getSuggestedWeight(id);
+    const autoUp=!ex.isTime&&sugW>w;
     const target=getNextTarget(id);
-    const isUp=target==='⬆️ Sube peso';
     return`<div class="nw-ex">
       <div><div class="nw-ex-name">${ex.name}</div><div class="nw-ex-target">${ex.isTime?ex.startTime+'s':w+'kg'} · último</div></div>
-      <div class="nw-ex-goal" style="${isUp?'color:var(--green)':''}">${target}</div>
+      <div class="nw-ex-goal" style="${autoUp?'color:var(--green)':''}">${autoUp?`⬆️ ${sugW}kg`:target}</div>
     </div>`;
   }).join('');
   document.getElementById('nw-area').innerHTML=`
@@ -738,6 +763,7 @@ function startSession(type){
   // show pre-session
   document.getElementById('w-idle').style.display='none';
   document.getElementById('w-active').classList.add('show');
+  document.getElementById('tabbar').style.display='none';
   document.getElementById('pre-session').style.display='block';
   document.getElementById('ex-body').style.display='none';
   document.getElementById('rest-scr').classList.remove('show');
@@ -793,11 +819,20 @@ function renderCurrentExercise(){
   // last session data
   const lastSets=getLastSets(exId);
   const lastW=getCurrentWeight(exId);
-  document.getElementById('ex-prev').textContent=lastSets.length
-    ?`Última vez: ${lastW}kg · ${lastSets.map(s=>s.reps).join('/')}`
-    :'Primera vez con este ejercicio';
+  const sugW=getSuggestedWeight(exId);
+  const autoAdvanced=!ex.isTime&&sugW>lastW;
+  let prevText='';
+  if(!lastSets.length){
+    prevText='Primera vez con este ejercicio';
+  } else {
+    const repsStr=lastSets.filter(Boolean).map(s=>s.reps).join('/');
+    prevText=`Última vez: ${lastW}kg · ${repsStr}`;
+    if(autoAdvanced)prevText+=` · 🎯 Auto-subido a ${sugW}kg`;
+  }
+  document.getElementById('ex-prev').textContent=prevText;
   // weight
-  if(!currentWeights[exId])currentWeights[exId]=lastW;
+  // Pre-fill with suggested weight (auto-advances if last session was 3×12 easy)
+  if(!currentWeights[exId])currentWeights[exId]=getSuggestedWeight(exId)||getCurrentWeight(exId);
   document.getElementById('weight-val').textContent=currentWeights[exId];
   // muscle bars
   document.getElementById('muscle-bars').innerHTML=ex.muscles.map(m=>`
@@ -818,10 +853,24 @@ function renderSeriesList(exId){
   document.getElementById('series-list').innerHTML=sets.map((s,i)=>{
     const isDone=s!==null;
     const isActive=!isDone&&(i===0||sets[i-1]!==null);
+    if(ex.isTime){
+      // Plank/Side Plank: show countdown button instead of rep buttons
+      return`<div class="serie-row ${isDone?'done':isActive?'active':''}" id="serie-row-${i}">
+        <div class="serie-num">S${i+1}</div>
+        <div style="flex:1">
+          ${isDone
+            ?`<span style="font-size:14px;font-weight:700;color:var(--amber)">${s.reps}s ✓</span>`
+            :isActive
+              ?`<button onclick="startPlankTimer(${i},${ex.startTime})" style="background:var(--blue);color:white;border:none;border-radius:var(--rsm);padding:8px 16px;font-size:14px;font-weight:700;cursor:pointer">▶ ${ex.startTime}s cuenta atrás</button>`
+              :`<span style="font-size:13px;color:var(--light)">Espera tu turno</span>`}
+        </div>
+        ${isDone?`<div class="rpe-btns">${['😊','😐','😵'].map((em,ri)=>`<button class="rpe-btn ${s.rpe===ri?'sel':''}" onclick="selectRpe(${i},${ri})">${em}</button>`).join('')}</div>`:''}
+      </div>`;
+    }
     return`<div class="serie-row ${isDone?'done':isActive?'active':''}" id="serie-row-${i}">
       <div class="serie-num">S${i+1}</div>
       <div class="reps-btns" id="reps-${i}">
-        ${REP_OPTIONS.map(r=>`<button class="rep-btn ${isDone&&s.reps===r?'sel':''}" onclick="selectReps(${i},${r})">${ex.isTime?r+'s':r}</button>`).join('')}
+        ${REP_OPTIONS.map(r=>`<button class="rep-btn ${isDone&&s.reps===r?'sel':''}" onclick="selectReps(${i},${r})">${r}</button>`).join('')}
       </div>
       <div class="rpe-btns" id="rpe-${i}">
         ${['😊','😐','😵'].map((em,ri)=>`<button class="rpe-btn ${isDone&&s.rpe===ri?'sel':''}" onclick="selectRpe(${i},${ri})">${em}</button>`).join('')}
@@ -856,27 +905,129 @@ function selectRpe(serieIdx,rpe){
 function completeSerie(idx){
   const exId=getSessionExercises()[curExIdx];
   if(!currentSets[exId][idx]){
-    // default: 10 reps, RPE normal
     const ex=EXERCISES[exId];
     currentSets[exId][idx]={reps:ex.isTime?ex.startTime:10,rpe:1};
   }
   renderSeriesList(exId);
-  // auto-start rest timer if not last serie
   const allDone=currentSets[exId].every(s=>s!==null);
-  if(!allDone){startRestTimer(90);}
+  if(!allDone){const exId2=getSessionExercises()[curExIdx];const ex2=EXERCISES[exId2];const restSecs=BIG_MUSCLES.includes(ex2.muscles[0]?.name)?120:90;startRestTimer(restSecs);}
+}
+
+let plankTimerInterval=null;
+function startPlankTimer(serieIdx,totalSecs){
+  // Show countdown inline in the serie row
+  const exId=getSessionExercises()[curExIdx];
+  let remaining=totalSecs;
+  const btn=document.querySelector(`#serie-row-${serieIdx} button`);
+  if(!btn)return;
+  btn.disabled=true;
+  clearInterval(plankTimerInterval);
+  plankTimerInterval=setInterval(()=>{
+    remaining--;
+    if(btn)btn.textContent=`⏱ ${remaining}s`;
+    if(remaining<=0){
+      clearInterval(plankTimerInterval);
+      // Mark as done
+      currentSets[exId][serieIdx]={reps:totalSecs,rpe:1};
+      renderSeriesList(exId);
+      const allDone=currentSets[exId].every(s=>s!==null);
+      if(!allDone)startRestTimer(90);
+    }
+  },1000);
 }
 
 function completeCurrentExercise(){
   const exIds=getSessionExercises();
   const exId=exIds[curExIdx];
   const ex=EXERCISES[exId];
-  // Only fill null sets for the CURRENT exercise (the one just completed)
-  // Don't touch other exercises
+  clearInterval(plankTimerInterval);
+  // Fill null sets for current exercise only
   currentSets[exId]=currentSets[exId].map(s=>s||{reps:ex.isTime?ex.startTime:10,rpe:1});
+
+  // RPE suggestion
+  if(!ex.isTime){
+    const sets=currentSets[exId].filter(Boolean);
+    const avgRpe=sets.reduce((a,s)=>a+(s.rpe||1),0)/sets.length;
+    const allReps=sets.map(s=>s.reps);
+    const minReps=Math.min(...allReps);
+    if(minReps>=12&&avgRpe<=1){
+      // Easy 3×12 → suggest weight up
+      const nextW=currentWeights[exId]+2.5;
+      showRpeSuggestion(ex.name,`😊 3×12 fácil → <strong>Sube a ${nextW}kg</strong> la próxima vez`,true);
+    } else if(minReps>=12&&avgRpe>=2){
+      showRpeSuggestion(ex.name,`💪 3×12 conseguido pero duro → Mantén ${currentWeights[exId]}kg y consolida`,false);
+    } else if(avgRpe>=2&&minReps<10){
+      const prevW=Math.max(0,currentWeights[exId]-2.5);
+      showRpeSuggestion(ex.name,`😵 Demasiado duro → Considera bajar a ${prevW}kg la próxima vez`,false);
+    }
+  }
+
   curExIdx++;
   if(curExIdx>=exIds.length){endWorkout();return;}
-  const nextEx=EXERCISES[exIds[curExIdx]];
-  startRestTimer(90,nextEx.name);
+
+  // Show smart next picker during rest
+  const restSecs=BIG_MUSCLES.includes(ex.muscles[0]?.name)?120:90;
+  const nextExId=exIds[curExIdx];
+  startRestTimerWithPicker(restSecs,nextExId,exIds,curExIdx);
+}
+
+let rpeSuggestionTimeout=null;
+function showRpeSuggestion(exName,msg,isUp){
+  // Brief overlay suggestion
+  const existing=document.getElementById('rpe-suggestion');
+  if(existing)existing.remove();
+  const div=document.createElement('div');
+  div.id='rpe-suggestion';
+  div.style.cssText=`position:fixed;top:80px;left:50%;transform:translateX(-50%);width:90%;max-width:420px;background:${isUp?'var(--amber)':'var(--surface)'};color:${isUp?'#0D0F14':'var(--text)'};border:1px solid ${isUp?'var(--amber)':'var(--border)'};border-radius:var(--radius);padding:12px 16px;font-size:13px;font-weight:600;z-index:80;text-align:center;line-height:1.5`;
+  div.innerHTML=msg;
+  document.body.appendChild(div);
+  clearTimeout(rpeSuggestionTimeout);
+  rpeSuggestionTimeout=setTimeout(()=>div.remove(),4000);
+}
+
+function startRestTimerWithPicker(secs,nextExId,allExIds,nextIdx){
+  // Build smart picker: remaining exercises ordered by smart rule
+  // (big muscles first if any big muscle not yet done)
+  const remaining=allExIds.slice(nextIdx);
+  const doneSoFar=allExIds.slice(0,nextIdx).map(id=>EXERCISES[id]?.muscles[0]?.name);
+  const anyBigRemaining=remaining.some(id=>BIG_MUSCLES.includes(EXERCISES[id]?.muscles[0]?.name));
+
+  const nextEl=document.getElementById('rest-next-name');
+  if(nextEl){
+    const nextEx=EXERCISES[nextExId];
+    const isBig=BIG_MUSCLES.includes(nextEx?.muscles[0]?.name);
+    nextEl.innerHTML=`<span>${nextEx?.name||'—'}</span><span style="font-size:11px;margin-left:6px;color:${isBig?'var(--amber)':'var(--muted)'}">${isBig?'● Grande':'● Pequeño'}</span>`;
+  }
+
+  // Show remaining exercise chips
+  const upcomingEl=document.getElementById('rest-upcoming-chips');
+  if(upcomingEl){
+    upcomingEl.innerHTML=remaining.map((id,i)=>{
+      const rex=EXERCISES[id];
+      const isBig=BIG_MUSCLES.includes(rex?.muscles[0]?.name);
+      const isNext=i===0;
+      return`<button onclick="pickNextEx(${nextIdx+i})" style="padding:5px 10px;border-radius:20px;border:1.5px solid ${isNext?'var(--amber)':isBig?'rgba(245,166,35,.4)':'var(--border)'};background:${isNext?'var(--amber-bg)':'var(--surface)'};color:${isNext?'var(--amber)':isBig?'var(--amber)':'var(--muted)'};font-size:12px;font-weight:600;cursor:pointer">${rex?.emoji||''} ${rex?.name||id}</button>`;
+    }).join('');
+  }
+
+  startRestTimer(secs,'');
+}
+
+function pickNextEx(idx){
+  // Reorder session so this exercise comes next
+  const order=sessionExOrder[currentSession]||[...SESSIONS[currentSession].exercises];
+  sessionExOrder[currentSession]=[...order];
+  // Swap curExIdx position with idx
+  const arr=sessionExOrder[currentSession];
+  // Find actual positions in arr for curExIdx and idx
+  const baseExIds=SESSIONS[currentSession].exercises;
+  // Simple approach: swap the elements at positions curExIdx and idx in sessionExOrder
+  const tmp=arr[curExIdx];arr[curExIdx]=arr[idx];arr[idx]=tmp;
+  // Skip rest and go to that exercise
+  clearInterval(timerInterval);
+  isResting=false;
+  document.getElementById('rest-scr').classList.remove('show');
+  renderCurrentExercise();
 }
 
 function startRestTimer(secs,nextName){
@@ -932,30 +1083,62 @@ function endWorkout(){
   document.getElementById('rest-scr').classList.remove('show');
   document.getElementById('w-ctrl').style.display='none';
   document.getElementById('done-scr').classList.add('show');
-  const progMsg=exData.map(({id,sets})=>{
+  // Build rich summary
+  const exSummaryRows=exData.map(({id,weight,sets})=>{
     const ex=EXERCISES[id];
-    if(ex.isTime)return null;
-    const allReps=sets.filter(Boolean).map(s=>s.reps);
-    if(allReps.length===3&&Math.min(...allReps)>=12){
-      const nextW=(currentWeights[id]||0)+2.5;
-      return`🎉 ${ex.name}: ¡3×12 conseguido! Próxima vez: <strong>${nextW}kg</strong>`;
-    }
-    return null;
-  }).filter(Boolean);
+    const realSets=sets.filter(Boolean);
+    const allReps=realSets.map(s=>s.reps);
+    const got3x12=!ex.isTime&&allReps.length===3&&Math.min(...allReps)>=12;
+    const avgRpe=realSets.reduce((a,s)=>a+(s.rpe||1),0)/Math.max(realSets.length,1);
+    const suggestion=ex.isTime?''
+      :got3x12&&avgRpe<=1?`→ Sube a ${weight+2.5}kg`
+      :got3x12?`→ Consolida ${weight}kg`
+      :'';
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:13px;font-weight:600">${ex.emoji} ${ex.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${ex.isTime?allReps[0]+'s':weight+'kg'} · ${allReps.join('/')}</div>
+      </div>
+      <div style="text-align:right">
+        ${got3x12?'<div style="font-size:11px;font-weight:700;color:var(--green)">✅ 3×12</div>':''}
+        ${suggestion?`<div style="font-size:11px;color:var(--amber);font-weight:600">${suggestion}</div>`:''}
+        <div style="font-size:11px;color:var(--muted)">${avgRpe<1.5?'😊':avgRpe<2.5?'😐':'😵'}</div>
+      </div>
+    </div>`;
+  }).join('');
   const doneCount=exData.length;
-  document.getElementById('done-sub').innerHTML=progMsg.length?progMsg.join('<br>'):`${SESSIONS[currentSession].name} · ${doneCount} ejercicios en ${mins} min.`;
+  document.getElementById('done-sub').innerHTML=`${SESSIONS[currentSession].name} · ${doneCount} ejercicios`;
   document.getElementById('done-stats-row').innerHTML=`
-    <div class="done-stat"><div class="done-stat-v">${mins}</div><div class="done-stat-l">Minutos</div></div>
+    <div class="done-stat"><div class="done-stat-v" id="done-min-val">${mins}</div><div class="done-stat-l">Minutos <span onclick="editDoneTime()" style="cursor:pointer;color:var(--amber)">✏️</span></div></div>
     <div class="done-stat"><div class="done-stat-v">${doneCount}</div><div class="done-stat-l">Ejercicios</div></div>
-    <div class="done-stat"><div class="done-stat-v">${totalKg}</div><div class="done-stat-l">Kg movidos</div></div>`;
+    <div class="done-stat"><div class="done-stat-v">${totalKg}</div><div class="done-stat-l">Kg totales</div></div>`;
   const food=getFoodMoment();
   document.getElementById('done-food').innerHTML=`
-    <div class="done-food-ttl">🍽 ${food.label} · ${food.timing}</div>
-    ${food.options.map(opt=>`<p style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${opt.emoji} <strong>${opt.name}</strong><br><span style="font-size:12px;color:var(--muted)">${opt.why}</span></p>`).join('')}`;
+    <div class="done-food-ttl">📊 Resumen de ejercicios</div>
+    ${exSummaryRows}
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div class="done-food-ttl">🍽 ${food.label} · ${food.timing}</div>
+      ${food.options.slice(0,2).map(opt=>`<p style="margin-top:8px">${opt.emoji} <strong>${opt.name}</strong><br><span style="font-size:12px;color:var(--muted)">${opt.why}</span></p>`).join('')}
+    </div>`;
+}
+
+function editDoneTime(){
+  const current=parseInt(document.getElementById('done-min-val').textContent)||0;
+  const newVal=prompt('Duración real (minutos):',current);
+  if(newVal&&!isNaN(newVal)){
+    const newMins=parseInt(newVal);
+    document.getElementById('done-min-val').textContent=newMins;
+    // Update last saved session duration
+    if(gymSessions.length){
+      gymSessions[gymSessions.length-1].duration=newMins*60;
+      save('gg_sessions',gymSessions);
+    }
+  }
 }
 
 function finishWorkout(){
   currentSession=null;
+  document.getElementById('tabbar').style.display='flex';
   document.getElementById('w-idle').style.display='block';
   document.getElementById('w-active').classList.remove('show');
   renderSessionGrid();
@@ -1003,8 +1186,10 @@ function showQuitModal(){document.getElementById('quit-modal').classList.add('sh
 function confirmQuit(){
   hideModal('quit-modal');
   clearInterval(timerInterval);
+  clearInterval(plankTimerInterval);
   currentSession=null;
   sessionStartTime=null;
+  document.getElementById('tabbar').style.display='flex';
   document.getElementById('w-idle').style.display='block';
   document.getElementById('w-active').classList.remove('show');
   document.getElementById('pre-session').style.display='none';
@@ -1351,30 +1536,31 @@ function showExNav(){
   const exIds=getSessionExercises();
   document.getElementById('exnav-list').innerHTML=exIds.map((id,i)=>{
     const ex=EXERCISES[id];
-    const isDone=i<curExIdx;
+    // isDone = actually has real sets recorded, not just index position
+    const sets=currentSets[id]||[null,null,null];
+    const reallyDone=sets.some(s=>s!==null);
     const isCurrent=i===curExIdx;
     const mainMuscle=ex.muscles[0]?.name||'';
     const isBig=BIG_MUSCLES.includes(mainMuscle);
     const muscleColor=isBig?'var(--amber)':'var(--muted)';
-    // recommendation note
     let note='';
-    if(i>0&&isBig){
+    if(i>0&&isBig&&!reallyDone&&!isCurrent){
       const prevEx=EXERCISES[exIds[i-1]];
-      const prevBig=BIG_MUSCLES.includes(prevEx.muscles[0]?.name||'');
-      if(!prevBig&&!isDone)note='⚠️ Músculo grande — idealmente antes que '+prevEx.name;
+      const prevDone=(currentSets[exIds[i-1]]||[]).some(s=>s!==null);
+      const prevBig=BIG_MUSCLES.includes(prevEx?.muscles[0]?.name||'');
+      if(!prevBig&&!prevDone)note='⚠️ Grande — idealmente antes que '+prevEx?.name;
     }
-    return`<div onclick="${isDone?'':isCurrent?'hideModal(\'exnav-modal\')':'jumpToEx('+i+')'}" 
-      style="background:${isCurrent?'var(--amber-bg)':isDone?'var(--surface)':'var(--card)'};
-             border:1.5px solid ${isCurrent?'var(--amber)':isDone?'var(--border)':'var(--border)'};
-             border-radius:var(--rsm);padding:12px 14px;cursor:${isDone?'default':'pointer'};
-             opacity:${isDone?0.5:1}">
+    return`<div onclick="${reallyDone&&!isCurrent?'':isCurrent?'hideModal(\'exnav-modal\')':'jumpToEx('+i+')'}"
+      style="background:${isCurrent?'var(--amber-bg)':reallyDone?'rgba(74,222,128,.08)':'var(--card)'};
+             border:1.5px solid ${isCurrent?'var(--amber)':reallyDone?'var(--green)':'var(--border)'};
+             border-radius:var(--rsm);padding:12px 14px;cursor:pointer">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:18px">${ex.emoji}</span>
         <div style="flex:1">
-          <div style="font-size:14px;font-weight:600;color:${isCurrent?'var(--amber)':'var(--text)'}">
-            ${isDone?'✓ ':''}${isCurrent?'▶ ':''}${ex.name}
+          <div style="font-size:14px;font-weight:600;color:${isCurrent?'var(--amber)':reallyDone?'var(--green)':'var(--text)'}">
+            ${reallyDone&&!isCurrent?'✓ ':''}${isCurrent?'▶ ':''}${ex.name}
           </div>
-          <div style="font-size:11px;color:${muscleColor};margin-top:2px;font-weight:600">${mainMuscle}${isBig?' · Grande':'· Pequeño/Core'}</div>
+          <div style="font-size:11px;color:${muscleColor};margin-top:2px;font-weight:600">${mainMuscle}${isBig?' · Grande':' · Pequeño/Core'}</div>
           ${note?`<div style="font-size:11px;color:var(--red);margin-top:2px">${note}</div>`:''}
         </div>
         <div style="font-size:11px;color:var(--muted);font-weight:600">${i+1}/${exIds.length}</div>

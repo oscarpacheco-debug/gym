@@ -1853,50 +1853,62 @@ function toggleGuideEx(id){openGuideEx=openGuideEx===id?null:id;renderGuia();}
 function renderSalud(){}// kept for compatibility, replaced by renderStats
 
 // ─── INIT (must be last) ──────────────────────────────────────────────────────
-if(!gymSessions.length||load('gg_v')!=='v6'){
-  const mk3=(reps,rpe)=>Array.from({length:3},()=>({reps,rpe}));
-  const mk2=(reps,rpe)=>Array.from({length:2},()=>({reps,rpe}));
-  gymSessions=[
-    {date:'2026-07-07',type:'upper',duration:2400,
-     totalKg:(20*11*3)+(25*11*3)+(20*11*3)+(5*11*3),
-     exercises:[
-       {id:'chest_press',weight:20,sets:mk3(11,1)},
-       {id:'lat_pulldown',weight:25,sets:mk3(11,1)},
-       {id:'dy_row',weight:20,sets:mk3(11,1)},
-       {id:'shoulder_press',weight:5,sets:mk3(11,1)},
-       {id:'plank',weight:0,sets:mk3(40,1)},
-    ]},
-    {date:'2026-07-09',type:'lower',duration:2400,
-     totalKg:(40*11*3)+(20*11*3)+(20*11*3)+(20*11*3),
-     exercises:[
-       {id:'leg_press',weight:40,sets:mk3(11,1)},
-       {id:'leg_curl',weight:20,sets:mk3(11,1)},
-       {id:'leg_ext',weight:20,sets:mk3(11,1)},
-       {id:'hip_thrust',weight:20,sets:mk3(11,1)},
-       {id:'side_plank',weight:0,sets:mk2(30,1)},
-    ]},
-    {date:'2026-07-12',type:'full',duration:2700,
-     totalKg:(60*10*3)+(20*12*3)+(25*12*3)+(7*10*2)+(25*12*2),
-     exercises:[
-       {id:'leg_press',weight:60,sets:mk3(10,2)},
-       {id:'chest_press',weight:20,sets:mk3(12,1)},
-       {id:'lat_pulldown',weight:25,sets:mk3(12,1)},
-       {id:'shoulder_press',weight:7,sets:mk2(10,1)},
-       {id:'leg_curl',weight:25,sets:mk2(12,2)},
-       {id:'plank',weight:0,sets:mk3(40,1)},
-    ]},
-  ];
-  // Reset exercise history cleanly from sessions
-  exHistory={};
-  gymSessions.forEach(sess=>{
-    sess.exercises.forEach(({id,weight,sets})=>{
-      if(!exHistory[id])exHistory[id]=[];
-      exHistory[id].push({date:sess.date,weight,sets});
-    });
-  });
+// Merge known sessions — only add dates not already in localStorage
+const mk3=(reps,rpe)=>Array.from({length:3},()=>({reps,rpe}));
+const mk2=(reps,rpe)=>Array.from({length:2},()=>({reps,rpe}));
+const KNOWN_SESSIONS=[
+  {date:'2026-07-07',type:'upper',duration:2400,totalKg:(20*11*3)+(25*11*3)+(20*11*3)+(5*11*3),exercises:[
+    {id:'chest_press',weight:20,sets:mk3(11,1)},{id:'lat_pulldown',weight:25,sets:mk3(11,1)},
+    {id:'dy_row',weight:20,sets:mk3(11,1)},{id:'shoulder_press',weight:5,sets:mk3(11,1)},{id:'plank',weight:0,sets:mk3(40,1)},
+  ]},
+  {date:'2026-07-09',type:'lower',duration:2400,totalKg:(40*11*3)+(20*11*3)+(20*11*3)+(20*11*3),exercises:[
+    {id:'leg_press',weight:40,sets:mk3(11,1)},{id:'leg_curl',weight:20,sets:mk3(11,1)},
+    {id:'leg_ext',weight:20,sets:mk3(11,1)},{id:'hip_thrust',weight:20,sets:mk3(11,1)},{id:'side_plank',weight:0,sets:mk2(30,1)},
+  ]},
+  {date:'2026-07-12',type:'full',duration:2700,totalKg:(60*10*3)+(20*12*3)+(25*12*3)+(7*10*2)+(25*12*2),exercises:[
+    {id:'leg_press',weight:60,sets:mk3(10,2)},{id:'chest_press',weight:20,sets:mk3(12,1)},
+    {id:'lat_pulldown',weight:25,sets:mk3(12,1)},{id:'shoulder_press',weight:7,sets:mk2(10,1)},
+    {id:'leg_curl',weight:25,sets:mk2(12,2)},{id:'plank',weight:0,sets:mk3(40,1)},
+  ]},
+  {date:'2026-07-15',type:'upper',duration:2400,totalKg:(25*10*3)+(25*10*3)+(20*10*3)+(7.5*10*3),exercises:[
+    {id:'chest_press',weight:25,sets:mk3(10,1)},{id:'lat_pulldown',weight:25,sets:mk3(10,1)},
+    {id:'dy_row',weight:20,sets:mk3(10,1)},{id:'shoulder_press',weight:7.5,sets:mk3(10,1)},{id:'plank',weight:0,sets:mk3(40,1)},
+  ]},
+  {date:'2026-07-16',type:'lower',duration:2400,totalKg:(60*10*3)+(25*10*3)+(20*10*3)+(20*10*3),exercises:[
+    {id:'leg_press',weight:60,sets:mk3(10,1)},{id:'leg_curl',weight:25,sets:mk3(10,1)},
+    {id:'leg_ext',weight:20,sets:mk3(10,1)},{id:'hip_thrust',weight:20,sets:mk3(10,1)},{id:'side_plank',weight:0,sets:mk2(30,1)},
+  ]},
+  {date:'2026-07-24',type:'upper',duration:2400,totalKg:(25*10*3)+(25*10*3)+(20*10*3)+(7.5*10*3),exercises:[
+    {id:'chest_press',weight:25,sets:mk3(10,1)},{id:'lat_pulldown',weight:25,sets:mk3(10,1)},
+    {id:'dy_row',weight:20,sets:mk3(10,1)},{id:'shoulder_press',weight:7.5,sets:mk3(10,1)},{id:'plank',weight:0,sets:mk3(40,1)},
+  ]},
+  {date:'2026-07-28',type:'lower',duration:2400,totalKg:(60*10*3)+(25*10*3)+(25*10*3)+(20*10*3),exercises:[
+    {id:'leg_press',weight:60,sets:mk3(10,1)},{id:'leg_curl',weight:25,sets:mk3(10,1)},
+    {id:'leg_ext',weight:25,sets:mk3(10,1)},{id:'hip_thrust',weight:20,sets:mk3(10,1)},{id:'side_plank',weight:0,sets:mk2(30,1)},
+  ]},
+  {date:'2026-08-01',type:'full',duration:2700,totalKg:(60*10*3)+(25*10*3)+(25*10*3)+(7.5*10*2)+(25*10*2),exercises:[
+    {id:'leg_press',weight:60,sets:mk3(10,1)},{id:'chest_press',weight:25,sets:mk3(10,1)},
+    {id:'lat_pulldown',weight:25,sets:mk3(10,1)},{id:'shoulder_press',weight:7.5,sets:mk2(10,1)},
+    {id:'leg_curl',weight:25,sets:mk2(10,1)},{id:'plank',weight:0,sets:mk3(40,1)},
+  ]},
+  {date:'2026-08-06',type:'upper',duration:2400,totalKg:(25*10*3)+(30*10*3)+(30*10*3)+(10*10*3),exercises:[
+    {id:'chest_press',weight:25,sets:mk3(10,1)},{id:'lat_pulldown',weight:30,sets:mk3(10,1)},
+    {id:'dy_row',weight:30,sets:mk3(10,1)},{id:'shoulder_press',weight:10,sets:mk3(10,1)},{id:'plank',weight:0,sets:mk3(40,1)},
+  ]},
+  {date:'2026-08-07',type:'lower',duration:2400,totalKg:(70*10*3)+(30*10*3)+(25*10*3)+(20*10*3),exercises:[
+    {id:'leg_press',weight:70,sets:mk3(10,2)},{id:'leg_curl',weight:30,sets:mk3(10,1)},
+    {id:'leg_ext',weight:25,sets:mk3(10,1)},{id:'hip_thrust',weight:20,sets:mk3(10,1)},{id:'side_plank',weight:0,sets:mk2(30,1)},
+  ]},
+];
+// Add any known session whose date isn't already saved
+const existingDates=new Set(gymSessions.map(s=>s.date));
+let merged=false;
+KNOWN_SESSIONS.forEach(ks=>{if(!existingDates.has(ks.date)){gymSessions.push(ks);merged=true;}});
+if(merged){
+  gymSessions.sort((a,b)=>a.date.localeCompare(b.date));
+  rebuildExHistory();
   save('gg_sessions',gymSessions);
   save('gg_exhist',exHistory);
-  save('gg_v','v6');
 }
 renderDashboard();
 renderSessionGrid();

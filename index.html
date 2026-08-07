@@ -326,7 +326,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
     <div class="w-ctrl" id="w-ctrl" style="display:none">
       <button class="ctrl" onclick="showAltModal()">⇄ Cambiar</button>
       <button class="ctrl" onclick="showReorderActiveModal()">⇅ Orden</button>
-      <button class="ctrl" onclick="showQuitModal()">Salir</button>
+      <button class="ctrl" onclick="skipCurrentExercise()">Saltar ej.</button><button class="ctrl" onclick="showQuitModal()">Salir</button>
       <button class="ctrl primary" id="next-btn" onclick="completeCurrentExercise()">Siguiente →</button>
     </div>
   </div>
@@ -479,7 +479,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 
 const EXERCISES={
   chest_press:{id:'chest_press',name:'Chest Press',emoji:'🏋️',startWeight:20,muscles:[{name:'Pecho',pct:85,color:'#F5A623'},{name:'Tríceps',pct:50,color:'#3B82F6'},{name:'Hombro',pct:25,color:'#A78BFA'}],tip:'Agarra las asas a la altura del pecho. Empuja hacia adelante expirando, baja controlado en 3 segundos. No bloquees los codos arriba del todo — mantén tensión.',alts:[]},
-  lat_pulldown:{id:'lat_pulldown',name:'Lat Pulldown',emoji:'💪',startWeight:25,muscles:[{name:'Espalda',pct:90,color:'#F5A623'},{name:'Bíceps',pct:55,color:'#3B82F6'},{name:'Core',pct:20,color:'#4ADE80'}],tip:'Agarre ligeramente más ancho que los hombros. Tira del pecho, no de la barbilla. Al bajar, aprieta los omóplatos hacia abajo y atrás. Sube controlado.',alts:['Vertical Traction','Seated Row']},
+  lat_pulldown:{id:'lat_pulldown',name:'Vertical Traction',emoji:'💪',startWeight:25,muscles:[{name:'Espalda',pct:90,color:'#F5A623'},{name:'Bíceps',pct:55,color:'#3B82F6'},{name:'Core',pct:20,color:'#4ADE80'}],tip:'Agarre ligeramente más ancho que los hombros. Tira del pecho, no de la barbilla. Al bajar, aprieta los omóplatos hacia abajo y atrás. Sube controlado.',alts:['Lat Pulldown','Seated Row','Cable Row']},
   dy_row:{id:'dy_row',name:'Iso-Lateral DY Row',emoji:'🔙',startWeight:20,muscles:[{name:'Espalda',pct:85,color:'#F5A623'},{name:'Bíceps',pct:60,color:'#3B82F6'},{name:'Hombro posterior',pct:30,color:'#A78BFA'}],tip:'Inclínate ligeramente hacia adelante. Tira del codo hacia atrás, no hacia arriba. Aprieta la espalda al final del movimiento. Alterna lados o usa ambos a la vez.',alts:['Seated Row','Cable Row']},
   shoulder_press:{id:'shoulder_press',name:'Shoulder Press',emoji:'🙆',startWeight:5,muscles:[{name:'Hombro',pct:90,color:'#F5A623'},{name:'Tríceps',pct:40,color:'#3B82F6'},{name:'Trapecios',pct:25,color:'#A78BFA'}],tip:'Asiento ajustado para que los codos estén a 90° al inicio. Empuja hacia arriba sin arquear la espalda baja. Sube hasta casi estirar los brazos, baja controlado.',alts:['Delta Machine','Dumbbell Press','Lateral Raises Machine']},
   plank:{id:'plank',name:'Plank',emoji:'🧘',startWeight:0,isTime:true,startTime:40,muscles:[{name:'Core',pct:95,color:'#F5A623'},{name:'Glúteos',pct:30,color:'#3B82F6'},{name:'Hombros',pct:25,color:'#A78BFA'}],tip:'Codos bajo los hombros. Cuerpo en línea recta de cabeza a talones. Activa el abdomen como si fueras a recibir un golpe. Respira sin aguantar el aliento.',alts:['Dead Bug','Hollow Hold']},
@@ -821,6 +821,7 @@ function renderCurrentExercise(){
   const lastW=getCurrentWeight(exId);
   const sugW=getSuggestedWeight(exId);
   const autoAdvanced=!ex.isTime&&sugW>lastW;
+  const weeksAtW=getWeeksAtWeight(exId);
   let prevText='';
   if(!lastSets.length){
     prevText='Primera vez con este ejercicio';
@@ -828,6 +829,7 @@ function renderCurrentExercise(){
     const repsStr=lastSets.filter(Boolean).map(s=>s.reps).join('/');
     prevText=`Última vez: ${lastW}kg · ${repsStr}`;
     if(autoAdvanced)prevText+=` · 🎯 Auto-subido a ${sugW}kg`;
+    else if(weeksAtW>1)prevText+=` · ${weeksAtW} sesiones con ${lastW}kg`;
   }
   document.getElementById('ex-prev').textContent=prevText;
   // weight
@@ -884,15 +886,28 @@ function adjustWeight(delta){
   const exId=getSessionExercises()[curExIdx];
   const ex=EXERCISES[exId];
   if(ex.isTime)return;
-  currentWeights[exId]=Math.max(0,Math.round((currentWeights[exId]+delta)*2)/2);
+  const raw=currentWeights[exId]+delta;
+  // Snap to nearest 2.5kg to avoid floating point issues
+  currentWeights[exId]=Math.max(0,Math.round(raw/2.5)*2.5);
   document.getElementById('weight-val').textContent=currentWeights[exId];
 }
 
 function selectReps(serieIdx,reps){
   const exId=getSessionExercises()[curExIdx];
   if(!currentSets[exId][serieIdx])currentSets[exId][serieIdx]={reps:null,rpe:1};
-  currentSets[exId][serieIdx].reps=reps;
+  const existingRpe=currentSets[exId][serieIdx].rpe||1;
+  currentSets[exId][serieIdx]={reps,rpe:existingRpe};
+  // Auto-complete serie when reps are tapped (don't require button press)
   renderSeriesList(exId);
+  const allDone=currentSets[exId].every(s=>s!==null&&s.reps!==null);
+  if(!allDone){
+    const ex2=EXERCISES[exId];
+    const restSecs=BIG_MUSCLES.includes(ex2.muscles[0]?.name)?120:90;
+    // Small delay so user sees selection before rest starts
+    setTimeout(()=>{
+      if(currentSets[exId][serieIdx]?.reps===reps)startRestTimer(restSecs);
+    },600);
+  }
 }
 
 function selectRpe(serieIdx,rpe){
@@ -985,6 +1000,38 @@ function showRpeSuggestion(exName,msg,isUp){
   rpeSuggestionTimeout=setTimeout(()=>div.remove(),4000);
 }
 
+function skipCurrentExercise(){
+  // Skip without marking as done — just advance index
+  const exIds=getSessionExercises();
+  curExIdx++;
+  if(curExIdx>=exIds.length){endWorkout();return;}
+  renderCurrentExercise();
+}
+
+function goToExercise(exId){
+  // Switch to progreso tab and open that exercise card
+  switchTab('progreso',document.querySelectorAll('.tb')[2]);
+  openExCard=exId;
+  renderProgreso();
+  // Scroll to exercise card
+  setTimeout(()=>{
+    const el=document.getElementById('excb-'+exId);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },200);
+}
+
+function getWeeksAtWeight(exId){
+  const hist=exHistory[exId]||[];
+  if(!hist.length)return 0;
+  const curW=getCurrentWeight(exId);
+  let weeks=0;
+  for(let i=hist.length-1;i>=0;i--){
+    if(hist[i].weight===curW)weeks++;
+    else break;
+  }
+  return weeks;
+}
+
 function startRestTimerWithPicker(secs,nextExId,allExIds,nextIdx){
   // Build smart picker: remaining exercises ordered by smart rule
   // (big muscles first if any big muscle not yet done)
@@ -1030,20 +1077,23 @@ function pickNextEx(idx){
   renderCurrentExercise();
 }
 
+let restEndTime=null;
 function startRestTimer(secs,nextName){
   isResting=true;
   timerSec=secs;timerTotal=secs;
+  restEndTime=Date.now()+(secs*1000);
   document.getElementById('rest-scr').classList.add('show');
   document.getElementById('rest-dig').textContent=fmt(timerSec);
   if(nextName)document.getElementById('rest-next-name').textContent=nextName;
   updateRestArc(timerSec,timerTotal);
   clearInterval(timerInterval);
   timerInterval=setInterval(()=>{
-    timerSec--;
-    document.getElementById('rest-dig').textContent=fmt(timerSec);
-    updateRestArc(timerSec,timerTotal);
-    if(timerSec<=0){clearInterval(timerInterval);skipRest();}
-  },1000);
+    if(!restEndTime)return;
+    const remaining=Math.max(0,Math.ceil((restEndTime-Date.now())/1000));
+    document.getElementById('rest-dig').textContent=fmt(remaining);
+    updateRestArc(remaining,timerTotal);
+    if(remaining<=0){clearInterval(timerInterval);restEndTime=null;skipRest();}
+  },250);// Poll 4x/sec so it catches up when returning to app
 }
 
 function skipRest(){
@@ -1768,7 +1818,7 @@ function renderStats(){
         const hist=exHistory[p.id]||[];
         const firstW=hist[0]?.weight||p.maxW;
         const gained=p.maxW-firstW;
-        return`<div class="card" style="display:flex;align-items:center;gap:12px">
+        return`<div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="goToExercise('${p.id}')">
           <span style="font-size:20px">${p.emoji}</span>
           <div style="flex:1">
             <div style="font-size:13px;font-weight:600">${p.name}</div>
@@ -1803,7 +1853,7 @@ function toggleGuideEx(id){openGuideEx=openGuideEx===id?null:id;renderGuia();}
 function renderSalud(){}// kept for compatibility, replaced by renderStats
 
 // ─── INIT (must be last) ──────────────────────────────────────────────────────
-if(!gymSessions.length||load('gg_v')!=='v5'){
+if(!gymSessions.length||load('gg_v')!=='v6'){
   const mk3=(reps,rpe)=>Array.from({length:3},()=>({reps,rpe}));
   const mk2=(reps,rpe)=>Array.from({length:2},()=>({reps,rpe}));
   gymSessions=[
@@ -1846,7 +1896,7 @@ if(!gymSessions.length||load('gg_v')!=='v5'){
   });
   save('gg_sessions',gymSessions);
   save('gg_exhist',exHistory);
-  save('gg_v','v5');
+  save('gg_v','v6');
 }
 renderDashboard();
 renderSessionGrid();

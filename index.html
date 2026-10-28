@@ -927,10 +927,12 @@ function renderCurrentExercise(){
   const reqLabel=cfg.required===false?'Opcional':'Obligatorio';
   const noteLabel=cfg.note?`⚠️ ${cfg.note}`:'';
   document.getElementById('ex-count-text').textContent=`Ejercicio ${curExIdx+1} de ${exIds.length} · ${seriesLabel} · ${repsLabel}${cfg.required===false?' · Opcional':''}`;
+  let noteEl=document.getElementById('ex-session-note');
   if(noteLabel){
-    let noteEl=document.getElementById('ex-session-note');
     if(!noteEl){noteEl=document.createElement('div');noteEl.id='ex-session-note';noteEl.style.cssText='font-size:12px;color:var(--amber);margin-top:4px;';document.getElementById('ex-count').after(noteEl);}
     noteEl.textContent=noteLabel;
+  } else if(noteEl){
+    noteEl.textContent='';
   }
   document.getElementById('ex-nm').textContent=ex.name;
   // last session data
@@ -1902,6 +1904,7 @@ function rebuildExHistory(){
 
 function showAddSessionModal(){
   asmType='upper';
+  asmExtraCount=0;
   document.getElementById('asm-date').value=today();
   document.getElementById('asm-dur').value='40';
   document.querySelectorAll('#asm-type-btns button').forEach((b,i)=>{
@@ -1925,34 +1928,64 @@ function setAsmType(type,btn){
 function renderAsmExercises(){
   const sess=SESSIONS[asmType];
   const exList=sess.exercises;
+  // Build full exercise options for dropdown
+  const allExOptions=Object.values(EXERCISES)
+    .filter(e=>!e.id.includes('_alt'))
+    .map(e=>`<option value="${e.id}">${e.name}</option>`)
+    .join('');
+
   document.getElementById('asm-exercises').innerHTML=exList.map((exCfg,i)=>{
     const id=exCfg.id||exCfg;
     const ex=EXERCISES[id];
     if(!ex)return'';
     const w=getCurrentWeight(id);
     const defaultSeries=exCfg.seriesRange?exCfg.seriesRange[0]:3;
-    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <input type="checkbox" id="asm-cb-${i}" checked style="accent-color:var(--amber);width:18px;height:18px;flex-shrink:0">
-      <div style="flex:1">
-        <label for="asm-cb-${i}" style="font-size:13px;font-weight:600;cursor:pointer">${ex.name}</label>
-        <div style="font-size:11px;color:var(--muted)">${w}kg · ${exCfg.required===false?'Opcional':'Obligatorio'}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:4px">
-        <input type="number" id="asm-s-${i}" value="${defaultSeries}" min="0" max="5" style="width:36px;padding:4px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
-        <span style="font-size:11px;color:var(--muted)">series</span>
+    return`<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="asm-cb-${i}" checked style="accent-color:var(--amber);width:18px;height:18px;flex-shrink:0">
+        <select id="asm-ex-${i}" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:5px 8px">
+          ${Object.values(EXERCISES).filter(e=>!e.id.includes('_alt')).map(e=>`<option value="${e.id}" ${e.id===id?'selected':''}>${e.name}</option>`).join('')}
+        </select>
+        <input type="number" id="asm-s-${i}" value="${defaultSeries}" min="0" max="6" style="width:36px;padding:4px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+        <span style="font-size:11px;color:var(--muted)">×</span>
       </div>
     </div>`;
-  }).join('');
+  }).join('')+
+  // Extra exercises section
+  `<div style="margin-top:10px">
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Ejercicios extra (no en la rutina base)</div>
+    <div id="asm-extras"></div>
+    <button onclick="addAsmExtra()" style="width:100%;padding:8px;background:var(--surface);border:1.5px dashed var(--border);border-radius:var(--rsm);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;margin-top:6px">+ Añadir ejercicio extra</button>
+  </div>`;
+}
+
+let asmExtraCount=0;
+function addAsmExtra(){
+  asmExtraCount++;
+  const div=document.createElement('div');
+  div.id=`asm-extra-${asmExtraCount}`;
+  div.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)';
+  div.innerHTML=`
+    <select id="asm-extra-ex-${asmExtraCount}" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:5px 8px">
+      ${Object.values(EXERCISES).filter(e=>!e.id.includes('_alt')).map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}
+      <option value="__custom__">Otro (escribir)</option>
+    </select>
+    <input type="number" id="asm-extra-s-${asmExtraCount}" value="3" min="1" max="6" style="width:36px;padding:4px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+    <span style="font-size:11px;color:var(--muted)">×</span>
+    <button onclick="document.getElementById('asm-extra-${asmExtraCount}').remove()" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">✕</button>`;
+  document.getElementById('asm-extras').appendChild(div);
 }
 
 function saveAddSession(){
   const date=document.getElementById('asm-date').value||today();
   const dur=(parseInt(document.getElementById('asm-dur').value)||40)*60;
   const sess=SESSIONS[asmType];
+  // Main exercises (with possible swaps via dropdown)
   const exercises=sess.exercises.map((exCfg,i)=>{
-    const id=exCfg.id||exCfg;
     const cb=document.getElementById('asm-cb-'+i);
-    if(cb&&!cb.checked)return null;// skipped
+    if(cb&&!cb.checked)return null;
+    const selEl=document.getElementById('asm-ex-'+i);
+    const id=selEl?selEl.value:(exCfg.id||exCfg);
     const seriesCount=parseInt(document.getElementById('asm-s-'+i)?.value)||3;
     if(seriesCount===0)return null;
     const w=getSuggestedWeight(id)||getCurrentWeight(id);
@@ -1960,6 +1993,20 @@ function saveAddSession(){
     const reps=ex?.isTime?ex.startTime:10;
     return{id,weight:w,sets:Array.from({length:seriesCount},()=>({reps,rpe:1}))};
   }).filter(Boolean);
+  // Extra exercises
+  for(let k=1;k<=asmExtraCount;k++){
+    const row=document.getElementById('asm-extra-'+k);
+    if(!row)continue;
+    const selEl=document.getElementById('asm-extra-ex-'+k);
+    const id=selEl?selEl.value:null;
+    if(!id||id==='__custom__')continue;
+    const seriesCount=parseInt(document.getElementById('asm-extra-s-'+k)?.value)||3;
+    const w=getSuggestedWeight(id)||getCurrentWeight(id);
+    const ex=EXERCISES[id];
+    const reps=ex?.isTime?ex.startTime:10;
+    exercises.push({id,weight:w,sets:Array.from({length:seriesCount},()=>({reps,rpe:1}))});
+  }
+  asmExtraCount=0;
   let totalKg=0;
   exercises.forEach(e=>{const ex=EXERCISES[e.id];if(ex&&!ex.isTime)totalKg+=e.sets.reduce((a,s)=>a+s.reps*e.weight,0);});
   gymSessions.push({date,type:asmType,duration:dur,totalKg,exercises});

@@ -349,6 +349,15 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
   <div class="ttl">Tus números</div>
   <div class="sub mt10">Todo automático. Solo entrena.</div>
   <div id="stats-main"></div>
+  <div class="sec-ttl" style="margin-top:24px">🔒 Backup de datos</div>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:13px;color:var(--muted);line-height:1.5">Exporta tus datos como archivo JSON. Guárdalo en Archivos, iCloud o Google Drive. Si la app se resetea, importa el archivo para recuperar todo.</div>
+    <button onclick="exportBackup()" style="padding:12px;background:var(--teal);color:white;border:none;border-radius:var(--rsm);font-size:14px;font-weight:700;cursor:pointer">⬇️ Exportar backup</button>
+    <label style="display:block;padding:12px;background:var(--surface);border:1.5px dashed var(--border);border-radius:var(--rsm);font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;text-align:center">
+      📂 Importar backup
+      <input type="file" accept=".json" onchange="importBackup(event)" style="display:none">
+    </label>
+  </div>
 </div>
 
 <!-- GUÍA -->
@@ -488,13 +497,51 @@ const EXERCISES={
   leg_ext:{id:'leg_ext',name:'Leg Extension',emoji:'🦵',startWeight:20,muscles:[{name:'Cuádriceps',pct:95,color:'#F5A623'},{name:'Recto femoral',pct:80,color:'#3B82F6'}],tip:'Rodillo justo encima del tobillo. Sube hasta casi estirar la rodilla (no bloquees). Aguanta 1 segundo arriba. Baja muy controlado.',alts:['Hack Squat','Terminal Knee Extension']},
   hip_thrust:{id:'hip_thrust',name:'Hip Thrust',emoji:'🍑',startWeight:20,muscles:[{name:'Glúteos',pct:95,color:'#F5A623'},{name:'Isquiotibiales',pct:45,color:'#3B82F6'},{name:'Core',pct:30,color:'#4ADE80'}],tip:'Espalda apoyada en el banco a la altura de los omóplatos. Empuja con los talones. Aprieta el glúteo arriba y aguanta 1 segundo. Baja sin tocar el suelo.',alts:['Glute Bridge Machine','Smith Machine Hip Thrust']},
   side_plank:{id:'side_plank',name:'Side Plank',emoji:'↔️',startWeight:0,isTime:true,startTime:30,muscles:[{name:'Oblicuos',pct:90,color:'#F5A623'},{name:'Core lateral',pct:80,color:'#3B82F6'},{name:'Glúteo medio',pct:35,color:'#4ADE80'}],tip:'Codo bajo el hombro. Cadera arriba, cuerpo en línea recta lateral. No dejes caer la cadera. 30 segundos cada lado.',alts:['Copenhagen Plank','Pallof Press']},
+  // NEW exercises
+  lateral_raises:{id:'lateral_raises',name:'Elevaciones laterales',emoji:'🙌',startWeight:5,muscles:[{name:'Hombro lateral',pct:90,color:'#F5A623'},{name:'Trapecios',pct:20,color:'#A78BFA'}],tip:'Peso ligero, control total. Sube los brazos hasta la altura del hombro (no más arriba). Codos ligeramente flexionados. Baja lento en 3 seg. No balancees el tronco.',alts:['Elevaciones laterales en polea','Máquina de deltoides'],minReps:12,maxReps:15},
+  bicep_curl:{id:'bicep_curl',name:'Curl de bíceps en polea',emoji:'💪',startWeight:10,muscles:[{name:'Bíceps',pct:90,color:'#F5A623'},{name:'Braquial',pct:40,color:'#3B82F6'}],tip:'Agarra la barra con agarre supino. Codos fijos al costado — no los muevas. Sube controlado, baja lento. Mantén tensión en todo el rango.',alts:['Máquina de bíceps','Curl con mancuernas']},
+  tricep_ext:{id:'tricep_ext',name:'Extensión de tríceps en polea',emoji:'🦾',startWeight:10,muscles:[{name:'Tríceps',pct:90,color:'#F5A623'},{name:'Antebrazo',pct:20,color:'#3B82F6'}],tip:'Codos pegados al cuerpo, fijos. Baja hasta estirar el brazo completamente. Sube controlado. Superset con curl de bíceps para ahorrar tiempo.',alts:['Máquina de tríceps','Fondos asistidos']},
+  hack_squat:{id:'hack_squat',name:'Hack Squat',emoji:'🦵',startWeight:40,muscles:[{name:'Cuádriceps',pct:90,color:'#F5A623'},{name:'Glúteos',pct:50,color:'#3B82F6'},{name:'Isquiotibiales',pct:30,color:'#4ADE80'}],tip:'Pies a la altura de los hombros. Baja hasta 90° o más. Empuja con los talones. No bloquees las rodillas arriba.',alts:['Leg Press','Sentadilla en Smith']},
+  hyperext:{id:'hyperext',name:'Hiperextensiones 45°',emoji:'🏃',startWeight:0,muscles:[{name:'Glúteos',pct:70,color:'#F5A623'},{name:'Isquiotibiales',pct:60,color:'#3B82F6'},{name:'Espalda baja',pct:50,color:'#A78BFA'}],tip:'Baja controlado hasta que sientas estiramiento en los isquios. Sube apretando glúteos. No hiperextendas la espalda arriba del todo.',alts:['Máquina de back extension','Cable pull-through']},
+  calf_raise:{id:'calf_raise',name:'Gemelos en máquina',emoji:'🦶',startWeight:30,muscles:[{name:'Gemelos',pct:90,color:'#F5A623'},{name:'Sóleo',pct:40,color:'#3B82F6'}],tip:'Rango completo: baja el talón por debajo de la plataforma, sube hasta la punta. Aguanta 1 segundo arriba. Tempo lento para sentir el trabajo.',alts:['Gemelos en prensa','Máquina de gemelos de pie']},
+  crunch_ab:{id:'crunch_ab',name:'Crunch abdominal',emoji:'🧘',startWeight:0,muscles:[{name:'Abdomen',pct:90,color:'#F5A623'},{name:'Core',pct:60,color:'#3B82F6'}],tip:'No tires del cuello. Contrae el abdomen antes de subir. Solo sube los hombros del suelo — no te incorpores del todo.',alts:['Crunch en polea','Plancha']},
+  incline_press:{id:'incline_press',name:'Press inclinado máquina',emoji:'🏋️',startWeight:20,muscles:[{name:'Pecho superior',pct:80,color:'#F5A623'},{name:'Tríceps',pct:45,color:'#3B82F6'},{name:'Hombro',pct:30,color:'#A78BFA'}],tip:'Inclinación 30-45°. Mismo patrón que el chest press. El pecho superior tarda más en desarrollarse — sé paciente.',alts:['Chest Press','Press inclinado en Smith']},
+  seated_row:{id:'seated_row',name:'Remo sentado en polea',emoji:'🚣',startWeight:20,muscles:[{name:'Espalda',pct:85,color:'#F5A623'},{name:'Bíceps',pct:50,color:'#3B82F6'},{name:'Romboides',pct:60,color:'#A78BFA'}],tip:'Pecho erguido durante todo el movimiento. Tira hacia el ombligo. Aprieta los omóplatos al final. No te balancees.',alts:['Iso-Lateral DY Row','Máquina de remo']},
 };
 
 const SESSIONS={
-  upper:{name:'Upper Body',emoji:'🟦',color:'#3B82F6',duration:'35-40 min',exercises:['chest_press','lat_pulldown','dy_row','shoulder_press','plank'],warmup:'Cinta 5 min'},
-  lower:{name:'Lower Body',emoji:'🟩',color:'#4ADE80',duration:'35-40 min',exercises:['leg_press','leg_curl','leg_ext','hip_thrust','side_plank'],warmup:'Cinta 5 min'},
-  full:{name:'Full Body',emoji:'🟨',color:'#F5A623',duration:'40-45 min',exercises:['leg_press','chest_press','lat_pulldown','leg_curl','shoulder_press','plank'],warmup:'Cinta 5 min'},
+  upper:{name:'Upper Body',emoji:'🟦',color:'#3B82F6',duration:'40-50 min',warmup:'Cinta 5 min',
+    exercises:[
+      {id:'chest_press',required:true,seriesRange:[3,3],repsRange:[8,12]},
+      {id:'lat_pulldown',required:true,seriesRange:[3,3],repsRange:[8,12]},
+      {id:'dy_row',required:true,seriesRange:[3,3],repsRange:[8,12]},
+      {id:'shoulder_press',required:false,seriesRange:[2,3],repsRange:[8,12]},
+      {id:'lateral_raises',required:false,seriesRange:[2,3],repsRange:[12,15]},
+      {id:'bicep_curl',required:false,seriesRange:[2,2],repsRange:[10,15],superset:'tricep_ext',supersetNote:'Alterna con tríceps'},
+      {id:'tricep_ext',required:false,seriesRange:[2,2],repsRange:[10,15],superset:'bicep_curl',supersetNote:'Alterna con bíceps'},
+    ]},
+  lower:{name:'Lower Body',emoji:'🟩',color:'#4ADE80',duration:'40-50 min',warmup:'Cinta 5 min',
+    exercises:[
+      {id:'leg_press',required:true,seriesRange:[3,3],repsRange:[8,12]},
+      {id:'hip_thrust',required:true,seriesRange:[3,3],repsRange:[8,12]},
+      {id:'leg_curl',required:true,seriesRange:[3,3],repsRange:[10,12]},
+      {id:'leg_ext',required:false,seriesRange:[2,3],repsRange:[10,15]},
+      {id:'hyperext',required:false,seriesRange:[2,2],repsRange:[10,15]},
+      {id:'calf_raise',required:false,seriesRange:[2,2],repsRange:[12,15]},
+    ]},
+  full:{name:'Full Body',emoji:'🟨',color:'#F5A623',duration:'45-55 min',warmup:'Cinta 5 min',
+    exercises:[
+      {id:'hack_squat',required:true,seriesRange:[3,3],repsRange:[8,12],note:'Si tienes agujetas de pierna: 2 series o sáltate'},
+      {id:'incline_press',required:true,seriesRange:[3,3],repsRange:[8,12]},
+      {id:'seated_row',required:true,seriesRange:[3,3],repsRange:[8,12]},
+      {id:'leg_curl',required:false,seriesRange:[2,3],repsRange:[10,12]},
+      {id:'lat_pulldown',required:false,seriesRange:[2,3],repsRange:[8,12]},
+      {id:'lateral_raises',required:false,seriesRange:[2,2],repsRange:[12,15]},
+      {id:'plank',required:false,seriesRange:[2,2],repsRange:[30,45],isTime:true},
+    ]},
 };
+// Helper: extract exercise IDs from session (new format)
+function getSessionExIds(type){return SESSIONS[type].exercises.map(e=>e.id||e);}
 
 const POST_WORKOUT_FOOD={
   morning:{label:'Desayuno post-entreno',timing:'Después de ducharte (07:30-09h)',options:[
@@ -541,6 +588,19 @@ let isResting=false;
 let altExercises={};// overrides for this session
 let sessionExOrder={};// custom order for this session [exIds]
 let reorderDragIdx=null;
+let skippedExercises={};// {exId: date} — exercises skipped last session
+
+// Autosave: save in-progress state every serie so closing app doesn't lose data
+function autosaveProgress(){
+  try{
+    localStorage.setItem('gg_inprogress',JSON.stringify({
+      session:currentSession,curExIdx,currentWeights,currentSets,
+      altExercises,sessionExOrder,sessionStartTime,ts:Date.now()
+    }));
+  }catch{}
+}
+function clearAutosave(){try{localStorage.removeItem('gg_inprogress');}catch{}}
+function loadAutosave(){try{return JSON.parse(localStorage.getItem('gg_inprogress'));}catch{return null;}}
 let openExCard=null;
 let openGuideEx=null;
 let activeHealthMetric=null;
@@ -571,20 +631,23 @@ function getLevelProgress(exId){
 function getCurrentWeight(exId){
   const hist=exHistory[exId]||[];
   if(hist.length>0)return hist[hist.length-1].weight;
-  return EXERCISES[exId].startWeight||0;
+  return EXERCISES[exId]?.startWeight||0;
 }
 function getLastSets(exId){
   const hist=exHistory[exId]||[];
   if(hist.length>0)return hist[hist.length-1].sets||[];
   return[];
 }
+// Suggested weights store — persists across sessions
+let suggestedWeights=load('gg_sugw')||{};
+
 // Returns the weight to pre-load for next session
 // If last session was 3×12 with RPE ≤ normal → auto-advance weight
 function getSuggestedWeight(exId){
   const ex=EXERCISES[exId];
   if(ex&&ex.isTime)return 0;
   const hist=exHistory[exId]||[];
-  if(!hist.length)return ex.startWeight||0;
+  if(!hist.length)return ex?.startWeight||0;
   const last=hist[hist.length-1];
   const sets=last.sets||[];
   const realSets=sets.filter(Boolean);
@@ -593,7 +656,14 @@ function getSuggestedWeight(exId){
   const minReps=Math.min(...allReps);
   const avgRpe=realSets.reduce((a,s)=>a+(s.rpe||1),0)/realSets.length;
   // 3×12 with RPE easy or normal → suggest +2.5kg
-  if(minReps>=12&&avgRpe<=1.5)return last.weight+2.5;
+  if(minReps>=12&&avgRpe<=1.5){
+    const next=Math.round((last.weight+2.5)/2.5)*2.5;
+    suggestedWeights[exId]=next;
+    save('gg_sugw',suggestedWeights);
+    return next;
+  }
+  // Clear suggestion if not met
+  if(suggestedWeights[exId]&&minReps<12){delete suggestedWeights[exId];save('gg_sugw',suggestedWeights);}
   return last.weight;
 }
 function getNextTarget(exId){
@@ -659,14 +729,17 @@ function renderDashboard(){
   const sess=SESSIONS[suggested];
   const lastSess=gymSessions.filter(s=>s.type===suggested).pop();
   const daysSinceLast=lastSess?daysSince(lastSess.date):null;
-  const exRows=sess.exercises.map(id=>{
+  const exRows=sess.exercises.map(exCfg=>{
+    const id=exCfg.id||exCfg;
     const ex=EXERCISES[id];
+    if(!ex)return'';
     const w=getCurrentWeight(id);
     const sugW=getSuggestedWeight(id);
     const autoUp=!ex.isTime&&sugW>w;
     const target=getNextTarget(id);
+    const seriesLabel=exCfg.seriesRange?`${exCfg.seriesRange[0]}–${exCfg.seriesRange[1]}×`:''
     return`<div class="nw-ex">
-      <div><div class="nw-ex-name">${ex.name}</div><div class="nw-ex-target">${ex.isTime?ex.startTime+'s':w+'kg'} · último</div></div>
+      <div><div class="nw-ex-name">${ex.name}</div><div class="nw-ex-target">${seriesLabel}${ex.isTime?ex.startTime+'s':w+'kg'} · ${autoUp?'subir':'último'}</div></div>
       <div class="nw-ex-goal" style="${autoUp?'color:var(--green)':''}">${autoUp?`⬆️ ${sugW}kg`:target}</div>
     </div>`;
   }).join('');
@@ -734,7 +807,7 @@ function renderSessionGrid(){
       <span class="session-icon">${s.emoji}</span>
       <div style="flex:1">
         <div class="session-name">${s.name}</div>
-        <div class="session-desc">${s.exercises.map(id=>EXERCISES[id].name).join(' · ')}</div>
+        <div class="session-desc">${s.exercises.map(e=>{const id=e.id||e;return EXERCISES[id]?.name||id;}).join(' · ')}</div>
         <div class="session-time">⏱ ${s.duration}</div>
       </div>
       ${key===suggested?`<span style="font-size:10px;background:var(--amber-bg);color:var(--amber);padding:3px 8px;border-radius:6px;font-weight:700;letter-spacing:.06em">SUGERIDO</span>`:''}
@@ -759,7 +832,7 @@ function startSession(type){
   currentSets={};
   const sess=SESSIONS[type];
   // pre-fill weights from history
-  sess.exercises.forEach(id=>{currentWeights[id]=getCurrentWeight(id);});
+  sess.exercises.forEach(exCfg=>{const id=exCfg.id||exCfg;currentWeights[id]=getSuggestedWeight(id)||getCurrentWeight(id);});
   // show pre-session
   document.getElementById('w-idle').style.display='none';
   document.getElementById('w-active').classList.add('show');
@@ -802,8 +875,15 @@ function beginSession(){
 
 // ─── WORKOUT ENGINE ───────────────────────────────────────────────────────────
 function getSessionExercises(){
-  const base=sessionExOrder[currentSession]||SESSIONS[currentSession].exercises;
-  return base.map(id=>altExercises[id]||id);
+  // New format: exercises are objects {id, required, seriesRange...}
+  const sess=SESSIONS[currentSession];
+  const baseIds=sessionExOrder[currentSession]||(sess.exercises.map(e=>e.id||e));
+  return baseIds.map(id=>altExercises[id]||id);
+}
+function getSessionExConfig(exId){
+  const sess=SESSIONS[currentSession];
+  const cfg=sess.exercises.find(e=>(e.id||e)===exId||(e.id||e)===Object.keys(altExercises).find(k=>altExercises[k]===exId));
+  return cfg||{id:exId,required:false,seriesRange:[3,3],repsRange:[8,12]};
 }
 
 function renderCurrentExercise(){
@@ -814,7 +894,17 @@ function renderCurrentExercise(){
   const exId=exIds[curExIdx];
   const ex=EXERCISES[exId];
   document.getElementById('prog-fill').style.width=((curExIdx/exIds.length)*100)+'%';
-  document.getElementById('ex-count-text').textContent=`Ejercicio ${curExIdx+1} de ${exIds.length}`;
+  const cfg=getSessionExConfig(exId);
+  const seriesLabel=cfg.seriesRange?`${cfg.seriesRange[0]}${cfg.seriesRange[0]!==cfg.seriesRange[1]?'–'+cfg.seriesRange[1]:''} series`:'3 series';
+  const repsLabel=cfg.repsRange?`${cfg.repsRange[0]}–${cfg.repsRange[1]} reps`:'8–12 reps';
+  const reqLabel=cfg.required===false?'Opcional':'Obligatorio';
+  const noteLabel=cfg.note?`⚠️ ${cfg.note}`:'';
+  document.getElementById('ex-count-text').textContent=`Ejercicio ${curExIdx+1} de ${exIds.length} · ${seriesLabel} · ${repsLabel}${cfg.required===false?' · Opcional':''}`;
+  if(noteLabel){
+    let noteEl=document.getElementById('ex-session-note');
+    if(!noteEl){noteEl=document.createElement('div');noteEl.id='ex-session-note';noteEl.style.cssText='font-size:12px;color:var(--amber);margin-top:4px;';document.getElementById('ex-count').after(noteEl);}
+    noteEl.textContent=noteLabel;
+  }
   document.getElementById('ex-nm').textContent=ex.name;
   // last session data
   const lastSets=getLastSets(exId);
@@ -833,8 +923,25 @@ function renderCurrentExercise(){
   }
   document.getElementById('ex-prev').textContent=prevText;
   // weight
-  // Pre-fill with suggested weight (auto-advances if last session was 3×12 easy)
-  if(!currentWeights[exId])currentWeights[exId]=getSuggestedWeight(exId)||getCurrentWeight(exId);
+  // Skipped disclaimer
+  const skippedDate=skippedExercises[exId];
+  let skipWarning=document.getElementById('ex-skip-warning');
+  if(!skipWarning){
+    skipWarning=document.createElement('div');skipWarning.id='ex-skip-warning';
+    skipWarning.style.cssText='font-size:12px;padding:6px 10px;border-radius:6px;margin-top:6px;';
+    document.getElementById('ex-prev').after(skipWarning);
+  }
+  if(skippedDate){
+    skipWarning.style.background='rgba(248,113,113,.12)';
+    skipWarning.style.color='var(--red)';
+    skipWarning.textContent=`⚠️ Lo saltaste el ${skippedDate} — esta vez hazlo si puedes`;
+  } else {skipWarning.textContent='';skipWarning.style.background='';}
+
+  // Pre-fill with persisted suggested weight, or compute fresh
+  if(!currentWeights[exId]){
+    const persisted=suggestedWeights[exId];
+    currentWeights[exId]=persisted||getSuggestedWeight(exId)||getCurrentWeight(exId);
+  }
   document.getElementById('weight-val').textContent=currentWeights[exId];
   // muscle bars
   document.getElementById('muscle-bars').innerHTML=ex.muscles.map(m=>`
@@ -926,6 +1033,7 @@ function completeSerie(idx){
   renderSeriesList(exId);
   const allDone=currentSets[exId].every(s=>s!==null);
   if(!allDone){const exId2=getSessionExercises()[curExIdx];const ex2=EXERCISES[exId2];const restSecs=BIG_MUSCLES.includes(ex2.muscles[0]?.name)?120:90;startRestTimer(restSecs);}
+  autosaveProgress();
 }
 
 let plankTimerInterval=null;
@@ -1067,7 +1175,7 @@ function pickNextEx(idx){
   // Swap curExIdx position with idx
   const arr=sessionExOrder[currentSession];
   // Find actual positions in arr for curExIdx and idx
-  const baseExIds=SESSIONS[currentSession].exercises;
+  const baseExIds=SESSIONS[currentSession].exercises.map(e=>e.id||e);
   // Simple approach: swap the elements at positions curExIdx and idx in sessionExOrder
   const tmp=arr[curExIdx];arr[curExIdx]=arr[idx];arr[idx]=tmp;
   // Skip rest and go to that exercise
@@ -1129,6 +1237,10 @@ function endWorkout(){
   });
   gymSessions.push({date:today(),type:currentSession,duration:elapsed,totalKg,exercises:exData});
   gymSessions=gymSessions.slice(-100);
+  // Track skipped exercises
+  const doneIds=new Set(exData.map(e=>e.id));
+  getSessionExercises().forEach(id=>{if(!doneIds.has(id)){skippedExercises[id]=today();}else{delete skippedExercises[id];}});
+  save('gg_skipped',skippedExercises);
   save('gg_exhist',exHistory);save('gg_sessions',gymSessions);
   document.getElementById('rest-scr').classList.remove('show');
   document.getElementById('w-ctrl').style.display='none';
@@ -1187,6 +1299,7 @@ function editDoneTime(){
 }
 
 function finishWorkout(){
+  clearAutosave();
   currentSession=null;
   document.getElementById('tabbar').style.display='flex';
   document.getElementById('w-idle').style.display='block';
@@ -1198,7 +1311,8 @@ function finishWorkout(){
 
 // ─── MODALS ───────────────────────────────────────────────────────────────────
 function showAltModal(){
-  const origId=SESSIONS[currentSession].exercises[curExIdx];
+  const exList=SESSIONS[currentSession].exercises;
+  const origId=(exList[curExIdx]?.id||exList[curExIdx]);
   const ex=EXERCISES[origId];
   const isAlt=!!altExercises[origId];
   const mainMuscle=ex.muscles[0];
@@ -1237,6 +1351,7 @@ function confirmQuit(){
   hideModal('quit-modal');
   clearInterval(timerInterval);
   clearInterval(plankTimerInterval);
+  clearAutosave();
   currentSession=null;
   sessionStartTime=null;
   document.getElementById('tabbar').style.display='flex';
@@ -1253,7 +1368,7 @@ function hideModal(id){document.getElementById(id).classList.remove('show')}
 
 function showReorderModal(){
   if(!currentSession)return;
-  const order=sessionExOrder[currentSession]||[...SESSIONS[currentSession].exercises];
+  const order=sessionExOrder[currentSession]||SESSIONS[currentSession].exercises.map(e=>e.id||e);
   sessionExOrder[currentSession]=[...order];
   renderReorderList(false);
   document.getElementById('reorder-modal').classList.add('show');
@@ -1261,7 +1376,7 @@ function showReorderModal(){
 
 function showReorderActiveModal(){
   if(!currentSession)return;
-  const order=sessionExOrder[currentSession]||[...SESSIONS[currentSession].exercises];
+  const order=sessionExOrder[currentSession]||SESSIONS[currentSession].exercises.map(e=>e.id||e);
   sessionExOrder[currentSession]=[...order];
   renderReorderList(true);
   document.getElementById('reorder-modal').classList.add('show');
@@ -1319,7 +1434,7 @@ function applyReorder(){
 
 function renderPreList(){
   const type=currentSession;
-  const currentOrder=sessionExOrder[type]||SESSIONS[type].exercises;
+  const currentOrder=sessionExOrder[type]||SESSIONS[type].exercises.map(e=>e.id||e);
   const rows=currentOrder.map(id=>{
     const ex=EXERCISES[id];
     const w=getCurrentWeight(id);
@@ -1744,10 +1859,7 @@ function saveAddSession(){
   const dur=(parseInt(document.getElementById('asm-dur').value)||40)*60;
   const sess=SESSIONS[asmType];
   // Add with default weights from current history
-  const exercises=sess.exercises.map(id=>({
-    id,weight:getCurrentWeight(id),
-    sets:Array.from({length:3},()=>({reps:10,rpe:1}))
-  }));
+  const exercises=sess.exercises.map(exCfg=>{const id=exCfg.id||exCfg;return{id,weight:getSuggestedWeight(id)||getCurrentWeight(id),sets:Array.from({length:3},()=>({reps:10,rpe:1}))};});
   let totalKg=0;
   exercises.forEach(e=>{const ex=EXERCISES[e.id];if(ex&&!ex.isTime)totalKg+=e.sets.reduce((a,s)=>a+s.reps*e.weight,0);});
   gymSessions.push({date,type:asmType,duration:dur,totalKg,exercises});
@@ -1850,9 +1962,80 @@ function renderStats(){
 }
 
 function toggleGuideEx(id){openGuideEx=openGuideEx===id?null:id;renderGuia();}
+
+// ─── BACKUP / RESTORE ────────────────────────────────────────────────────────
+function exportBackup(){
+  const data={
+    gg_sessions:gymSessions,
+    gg_exhist:exHistory,
+    gg_sugw:suggestedWeights,
+    gg_skipped:skippedExercises,
+    exported:new Date().toISOString(),
+    version:'gymgym_v1'
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`gimnasio-backup-${today()}.json`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function importBackup(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.version||!data.gg_sessions){alert('Archivo no válido o formato incorrecto.');return;}
+      const count=data.gg_sessions.length;
+      if(!confirm(`¿Importar backup con ${count} sesiones? Esto reemplazará los datos actuales.`))return;
+      gymSessions=data.gg_sessions||[];
+      exHistory=data.gg_exhist||{};
+      suggestedWeights=data.gg_sugw||{};
+      skippedExercises=data.gg_skipped||{};
+      save('gg_sessions',gymSessions);
+      save('gg_exhist',exHistory);
+      save('gg_sugw',suggestedWeights);
+      save('gg_skipped',skippedExercises);
+      alert(`✅ ${count} sesiones importadas correctamente.`);
+      renderDashboard();renderProgreso();renderStats();
+    }catch(err){alert('Error al leer el archivo: '+err.message);}
+  };
+  reader.readAsText(file);
+}
 function renderSalud(){}// kept for compatibility, replaced by renderStats
 
 // ─── INIT (must be last) ──────────────────────────────────────────────────────
+// Load persistent state
+skippedExercises=load('gg_skipped')||{};
+
+// Check for autosaved in-progress session
+const savedProgress=loadAutosave();
+if(savedProgress&&savedProgress.session&&(Date.now()-savedProgress.ts)<8*60*60*1000){
+  // Less than 8 hours old — offer to restore
+  setTimeout(()=>{
+    if(confirm(`Tienes una sesión de ${SESSIONS[savedProgress.session]?.name||savedProgress.session} guardada automáticamente (${new Date(savedProgress.ts).toLocaleTimeString()}). ¿Continuar?`)){
+      currentSession=savedProgress.session;
+      curExIdx=savedProgress.curExIdx||0;
+      currentWeights=savedProgress.currentWeights||{};
+      currentSets=savedProgress.currentSets||{};
+      altExercises=savedProgress.altExercises||{};
+      sessionExOrder=savedProgress.sessionExOrder||{};
+      sessionStartTime=savedProgress.sessionStartTime||Date.now();
+      document.getElementById('tabbar').style.display='none';
+      document.getElementById('w-active').classList.add('show');
+      document.getElementById('pre-session').style.display='none';
+      document.getElementById('ex-body').style.display='flex';
+      document.getElementById('w-ctrl').style.display='flex';
+      switchTab('entrena',document.querySelectorAll('.tb')[1]);
+      renderCurrentExercise();
+    }else{clearAutosave();}
+  },500);
+}
+
 // Merge known sessions — only add dates not already in localStorage
 const mk3=(reps,rpe)=>Array.from({length:3},()=>({reps,rpe}));
 const mk2=(reps,rpe)=>Array.from({length:2},()=>({reps,rpe}));
@@ -1915,40 +2098,6 @@ renderSessionGrid();
 renderProgreso();
 renderStats();
 renderGuia();
-</script>
-  <!-- AÑADE ESTO justo antes de </body> en tu index.html actual -->
-<!-- Paso 1: pega este bloque al final del HTML, antes de </body> -->
-
-<div style="position:fixed;bottom:80px;right:16px;z-index:999">
-  <button onclick="exportGymData()" style="background:#F5A623;color:#0D0F14;border:none;border-radius:50px;padding:12px 18px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.4)">
-    💾 Backup
-  </button>
-</div>
-
-<script>
-function exportGymData(){
-  try{
-    const data={
-      gg_sessions: JSON.parse(localStorage.getItem('gg_sessions')||'[]'),
-      gg_exhist: JSON.parse(localStorage.getItem('gg_exhist')||'{}'),
-      gg_sugw: JSON.parse(localStorage.getItem('gg_sugw')||'{}'),
-      exported: new Date().toISOString(),
-      version: 'gymgym_backup'
-    };
-    const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'gimnasio-backup-' + new Date().toISOString().slice(0,10) + '.json';
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
-    alert('✅ Backup exportado correctamente');
-  }catch(e){
-    // Fallback: show data in alert to copy manually
-    const d={s:localStorage.getItem('gg_sessions'),h:localStorage.getItem('gg_exhist')};
-    prompt('Copia este texto y guárdalo:',JSON.stringify(d));
-  }
-}
 </script>
 </body>
 </html>

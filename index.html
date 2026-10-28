@@ -282,7 +282,10 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
               <div class="ex-nm" id="ex-nm">—</div>
               <div class="ex-prev" id="ex-prev">—</div>
             </div>
-            <button onclick="showAltModal()" style="flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--rsm);padding:6px 10px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;margin-top:2px">⇄ Cambiar</button>
+            <div style="display:flex;gap:6px;flex-shrink:0;margin-top:2px">
+            <button onclick="showTechniqueDrawer()" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rsm);padding:6px 10px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">ℹ️ Tip</button>
+            <button onclick="showAltModal()" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rsm);padding:6px 10px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">⇄</button>
+          </div>
           </div>
           <div class="muscle-bars" id="muscle-bars"></div>
         </div>
@@ -442,6 +445,26 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
   </div>
 </div>
 
+<!-- TECHNIQUE DRAWER -->
+<div class="modal-bg" id="technique-modal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span style="font-size:28px" id="tm-emoji">🏋️</span>
+      <div>
+        <div class="modal-ttl" id="tm-name" style="margin-bottom:0">—</div>
+        <div style="font-size:11px;color:var(--muted)" id="tm-muscles">—</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border-radius:var(--rsm);padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">Técnica</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.7" id="tm-tip">—</div>
+    </div>
+    <div id="tm-muscle-bars" style="margin-bottom:14px"></div>
+    <div id="tm-alts" style="margin-bottom:14px"></div>
+    <button class="mbtn neutral" onclick="hideModal('technique-modal')" style="width:100%">Cerrar</button>
+  </div>
+</div>
+
 <!-- EDIT SESSION MODAL -->
 <div class="modal-bg" id="edit-session-modal">
   <div class="modal" style="max-height:85dvh;overflow-y:auto">
@@ -476,6 +499,10 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       <div class="s-label">Duración (minutos)</div>
       <input class="health-inp" type="number" id="asm-dur" placeholder="40" style="width:100%">
     </div>
+    <div style="margin-bottom:12px">
+      <div class="s-label" style="margin-bottom:8px">Ejercicios — marca los que hiciste y series</div>
+      <div id="asm-exercises"></div>
+    </div>
     <div class="modal-btns">
       <button class="mbtn primary" onclick="saveAddSession()">Añadir sesión</button>
       <button class="mbtn neutral" onclick="hideModal('add-session-modal')">Cancelar</button>
@@ -489,24 +516,24 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 const EXERCISES={
   chest_press:{id:'chest_press',name:'Chest Press',emoji:'🏋️',startWeight:20,muscles:[{name:'Pecho',pct:85,color:'#F5A623'},{name:'Tríceps',pct:50,color:'#3B82F6'},{name:'Hombro',pct:25,color:'#A78BFA'}],tip:'Agarra las asas a la altura del pecho. Empuja hacia adelante expirando, baja controlado en 3 segundos. No bloquees los codos arriba del todo — mantén tensión.',alts:[]},
   lat_pulldown:{id:'lat_pulldown',name:'Vertical Traction',emoji:'💪',startWeight:25,muscles:[{name:'Espalda',pct:90,color:'#F5A623'},{name:'Bíceps',pct:55,color:'#3B82F6'},{name:'Core',pct:20,color:'#4ADE80'}],tip:'Agarre ligeramente más ancho que los hombros. Tira del pecho, no de la barbilla. Al bajar, aprieta los omóplatos hacia abajo y atrás. Sube controlado.',alts:['Lat Pulldown','Seated Row','Cable Row']},
-  dy_row:{id:'dy_row',name:'Iso-Lateral DY Row',emoji:'🔙',startWeight:20,muscles:[{name:'Espalda',pct:85,color:'#F5A623'},{name:'Bíceps',pct:60,color:'#3B82F6'},{name:'Hombro posterior',pct:30,color:'#A78BFA'}],tip:'Inclínate ligeramente hacia adelante. Tira del codo hacia atrás, no hacia arriba. Aprieta la espalda al final del movimiento. Alterna lados o usa ambos a la vez.',alts:['Seated Row','Cable Row']},
+  dy_row:{id:'dy_row',name:'Iso-Lateral Row',emoji:'🔙',startWeight:20,muscles:[{name:'Espalda',pct:85,color:'#F5A623'},{name:'Bíceps',pct:60,color:'#3B82F6'},{name:'Hombro posterior',pct:30,color:'#A78BFA'}],tip:'Inclínate ligeramente hacia adelante. Tira del codo hacia atrás, no hacia arriba. Aprieta la espalda al final del movimiento. Alterna lados o usa ambos a la vez.',alts:['Seated Row','Cable Row']},
   shoulder_press:{id:'shoulder_press',name:'Shoulder Press',emoji:'🙆',startWeight:5,muscles:[{name:'Hombro',pct:90,color:'#F5A623'},{name:'Tríceps',pct:40,color:'#3B82F6'},{name:'Trapecios',pct:25,color:'#A78BFA'}],tip:'Asiento ajustado para que los codos estén a 90° al inicio. Empuja hacia arriba sin arquear la espalda baja. Sube hasta casi estirar los brazos, baja controlado.',alts:['Delta Machine','Dumbbell Press','Lateral Raises Machine']},
   plank:{id:'plank',name:'Plank',emoji:'🧘',startWeight:0,isTime:true,startTime:40,muscles:[{name:'Core',pct:95,color:'#F5A623'},{name:'Glúteos',pct:30,color:'#3B82F6'},{name:'Hombros',pct:25,color:'#A78BFA'}],tip:'Codos bajo los hombros. Cuerpo en línea recta de cabeza a talones. Activa el abdomen como si fueras a recibir un golpe. Respira sin aguantar el aliento.',alts:['Dead Bug','Hollow Hold']},
   leg_press:{id:'leg_press',name:'Leg Press',emoji:'🦵',startWeight:40,muscles:[{name:'Cuádriceps',pct:85,color:'#F5A623'},{name:'Glúteos',pct:60,color:'#3B82F6'},{name:'Isquiotibiales',pct:35,color:'#4ADE80'}],tip:'Pies a la anchura de los hombros en la plataforma. Baja hasta 90° de rodilla (no más). Empuja con los talones. No bloquees las rodillas arriba.',alts:['Hack Squat','Belt Squat']},
-  leg_curl:{id:'leg_curl',name:'Seated Leg Curl',emoji:'🦿',startWeight:20,muscles:[{name:'Isquiotibiales',pct:90,color:'#F5A623'},{name:'Gemelos',pct:30,color:'#3B82F6'}],tip:'Ajusta el rodillo para que quede justo encima del tobillo. Tira controlado hacia abajo, aguanta 1 segundo abajo. Sube lento en 3 segundos.',alts:['Lying Leg Curl','Romanian Deadlift']},
+  leg_curl:{id:'leg_curl',name:'Leg Curl (Seated)',emoji:'🦿',startWeight:20,muscles:[{name:'Isquiotibiales',pct:90,color:'#F5A623'},{name:'Gemelos',pct:30,color:'#3B82F6'}],tip:'Ajusta el rodillo para que quede justo encima del tobillo. Tira controlado hacia abajo, aguanta 1 segundo abajo. Sube lento en 3 segundos.',alts:['Lying Leg Curl','Romanian Deadlift']},
   leg_ext:{id:'leg_ext',name:'Leg Extension',emoji:'🦵',startWeight:20,muscles:[{name:'Cuádriceps',pct:95,color:'#F5A623'},{name:'Recto femoral',pct:80,color:'#3B82F6'}],tip:'Rodillo justo encima del tobillo. Sube hasta casi estirar la rodilla (no bloquees). Aguanta 1 segundo arriba. Baja muy controlado.',alts:['Hack Squat','Terminal Knee Extension']},
-  hip_thrust:{id:'hip_thrust',name:'Hip Thrust',emoji:'🍑',startWeight:20,muscles:[{name:'Glúteos',pct:95,color:'#F5A623'},{name:'Isquiotibiales',pct:45,color:'#3B82F6'},{name:'Core',pct:30,color:'#4ADE80'}],tip:'Espalda apoyada en el banco a la altura de los omóplatos. Empuja con los talones. Aprieta el glúteo arriba y aguanta 1 segundo. Baja sin tocar el suelo.',alts:['Glute Bridge Machine','Smith Machine Hip Thrust']},
+  hip_thrust:{id:'hip_thrust',name:'Hip Thrust / Glute Drive',emoji:'🍑',startWeight:20,muscles:[{name:'Glúteos',pct:95,color:'#F5A623'},{name:'Isquiotibiales',pct:45,color:'#3B82F6'},{name:'Core',pct:30,color:'#4ADE80'}],tip:'Espalda apoyada en el banco a la altura de los omóplatos. Empuja con los talones. Aprieta el glúteo arriba y aguanta 1 segundo. Baja sin tocar el suelo.',alts:['Glute Bridge Machine','Smith Machine Hip Thrust']},
   side_plank:{id:'side_plank',name:'Side Plank',emoji:'↔️',startWeight:0,isTime:true,startTime:30,muscles:[{name:'Oblicuos',pct:90,color:'#F5A623'},{name:'Core lateral',pct:80,color:'#3B82F6'},{name:'Glúteo medio',pct:35,color:'#4ADE80'}],tip:'Codo bajo el hombro. Cadera arriba, cuerpo en línea recta lateral. No dejes caer la cadera. 30 segundos cada lado.',alts:['Copenhagen Plank','Pallof Press']},
   // NEW exercises
-  lateral_raises:{id:'lateral_raises',name:'Elevaciones laterales',emoji:'🙌',startWeight:5,muscles:[{name:'Hombro lateral',pct:90,color:'#F5A623'},{name:'Trapecios',pct:20,color:'#A78BFA'}],tip:'Peso ligero, control total. Sube los brazos hasta la altura del hombro (no más arriba). Codos ligeramente flexionados. Baja lento en 3 seg. No balancees el tronco.',alts:['Elevaciones laterales en polea','Máquina de deltoides'],minReps:12,maxReps:15},
-  bicep_curl:{id:'bicep_curl',name:'Curl de bíceps en polea',emoji:'💪',startWeight:10,muscles:[{name:'Bíceps',pct:90,color:'#F5A623'},{name:'Braquial',pct:40,color:'#3B82F6'}],tip:'Agarra la barra con agarre supino. Codos fijos al costado — no los muevas. Sube controlado, baja lento. Mantén tensión en todo el rango.',alts:['Máquina de bíceps','Curl con mancuernas']},
-  tricep_ext:{id:'tricep_ext',name:'Extensión de tríceps en polea',emoji:'🦾',startWeight:10,muscles:[{name:'Tríceps',pct:90,color:'#F5A623'},{name:'Antebrazo',pct:20,color:'#3B82F6'}],tip:'Codos pegados al cuerpo, fijos. Baja hasta estirar el brazo completamente. Sube controlado. Superset con curl de bíceps para ahorrar tiempo.',alts:['Máquina de tríceps','Fondos asistidos']},
+  lateral_raises:{id:'lateral_raises',name:'Lateral Raises',emoji:'🙌',startWeight:5,muscles:[{name:'Hombro lateral',pct:90,color:'#F5A623'},{name:'Trapecios',pct:20,color:'#A78BFA'}],tip:'Peso ligero, control total. Sube los brazos hasta la altura del hombro (no más arriba). Codos ligeramente flexionados. Baja lento en 3 seg. No balancees el tronco.',alts:['Elevaciones laterales en polea','Máquina de deltoides'],minReps:12,maxReps:15},
+  bicep_curl:{id:'bicep_curl',name:'Bicep Curl (Cable)',emoji:'💪',startWeight:10,muscles:[{name:'Bíceps',pct:90,color:'#F5A623'},{name:'Braquial',pct:40,color:'#3B82F6'}],tip:'Agarra la barra con agarre supino. Codos fijos al costado — no los muevas. Sube controlado, baja lento. Mantén tensión en todo el rango.',alts:['Máquina de bíceps','Curl con mancuernas']},
+  tricep_ext:{id:'tricep_ext',name:'Tricep Pushdown (Cable)',emoji:'🦾',startWeight:10,muscles:[{name:'Tríceps',pct:90,color:'#F5A623'},{name:'Antebrazo',pct:20,color:'#3B82F6'}],tip:'Codos pegados al cuerpo, fijos. Baja hasta estirar el brazo completamente. Sube controlado. Superset con curl de bíceps para ahorrar tiempo.',alts:['Máquina de tríceps','Fondos asistidos']},
   hack_squat:{id:'hack_squat',name:'Hack Squat',emoji:'🦵',startWeight:40,muscles:[{name:'Cuádriceps',pct:90,color:'#F5A623'},{name:'Glúteos',pct:50,color:'#3B82F6'},{name:'Isquiotibiales',pct:30,color:'#4ADE80'}],tip:'Pies a la altura de los hombros. Baja hasta 90° o más. Empuja con los talones. No bloquees las rodillas arriba.',alts:['Leg Press','Sentadilla en Smith']},
-  hyperext:{id:'hyperext',name:'Hiperextensiones 45°',emoji:'🏃',startWeight:0,muscles:[{name:'Glúteos',pct:70,color:'#F5A623'},{name:'Isquiotibiales',pct:60,color:'#3B82F6'},{name:'Espalda baja',pct:50,color:'#A78BFA'}],tip:'Baja controlado hasta que sientas estiramiento en los isquios. Sube apretando glúteos. No hiperextendas la espalda arriba del todo.',alts:['Máquina de back extension','Cable pull-through']},
-  calf_raise:{id:'calf_raise',name:'Gemelos en máquina',emoji:'🦶',startWeight:30,muscles:[{name:'Gemelos',pct:90,color:'#F5A623'},{name:'Sóleo',pct:40,color:'#3B82F6'}],tip:'Rango completo: baja el talón por debajo de la plataforma, sube hasta la punta. Aguanta 1 segundo arriba. Tempo lento para sentir el trabajo.',alts:['Gemelos en prensa','Máquina de gemelos de pie']},
-  crunch_ab:{id:'crunch_ab',name:'Crunch abdominal',emoji:'🧘',startWeight:0,muscles:[{name:'Abdomen',pct:90,color:'#F5A623'},{name:'Core',pct:60,color:'#3B82F6'}],tip:'No tires del cuello. Contrae el abdomen antes de subir. Solo sube los hombros del suelo — no te incorpores del todo.',alts:['Crunch en polea','Plancha']},
-  incline_press:{id:'incline_press',name:'Press inclinado máquina',emoji:'🏋️',startWeight:20,muscles:[{name:'Pecho superior',pct:80,color:'#F5A623'},{name:'Tríceps',pct:45,color:'#3B82F6'},{name:'Hombro',pct:30,color:'#A78BFA'}],tip:'Inclinación 30-45°. Mismo patrón que el chest press. El pecho superior tarda más en desarrollarse — sé paciente.',alts:['Chest Press','Press inclinado en Smith']},
-  seated_row:{id:'seated_row',name:'Remo sentado en polea',emoji:'🚣',startWeight:20,muscles:[{name:'Espalda',pct:85,color:'#F5A623'},{name:'Bíceps',pct:50,color:'#3B82F6'},{name:'Romboides',pct:60,color:'#A78BFA'}],tip:'Pecho erguido durante todo el movimiento. Tira hacia el ombligo. Aprieta los omóplatos al final. No te balancees.',alts:['Iso-Lateral DY Row','Máquina de remo']},
+  hyperext:{id:'hyperext',name:'Back Extension 45°',emoji:'🏃',startWeight:0,muscles:[{name:'Glúteos',pct:70,color:'#F5A623'},{name:'Isquiotibiales',pct:60,color:'#3B82F6'},{name:'Espalda baja',pct:50,color:'#A78BFA'}],tip:'Baja controlado hasta que sientas estiramiento en los isquios. Sube apretando glúteos. No hiperextendas la espalda arriba del todo.',alts:['Máquina de back extension','Cable pull-through']},
+  calf_raise:{id:'calf_raise',name:'Calf Raise (Machine)',emoji:'🦶',startWeight:30,muscles:[{name:'Gemelos',pct:90,color:'#F5A623'},{name:'Sóleo',pct:40,color:'#3B82F6'}],tip:'Rango completo: baja el talón por debajo de la plataforma, sube hasta la punta. Aguanta 1 segundo arriba. Tempo lento para sentir el trabajo.',alts:['Gemelos en prensa','Máquina de gemelos de pie']},
+  crunch_ab:{id:'crunch_ab',name:'Ab Crunch',emoji:'🧘',startWeight:0,muscles:[{name:'Abdomen',pct:90,color:'#F5A623'},{name:'Core',pct:60,color:'#3B82F6'}],tip:'No tires del cuello. Contrae el abdomen antes de subir. Solo sube los hombros del suelo — no te incorpores del todo.',alts:['Crunch en polea','Plancha']},
+  incline_press:{id:'incline_press',name:'Incline Press (Machine)',emoji:'🏋️',startWeight:20,muscles:[{name:'Pecho superior',pct:80,color:'#F5A623'},{name:'Tríceps',pct:45,color:'#3B82F6'},{name:'Hombro',pct:30,color:'#A78BFA'}],tip:'Inclinación 30-45°. Mismo patrón que el chest press. El pecho superior tarda más en desarrollarse — sé paciente.',alts:['Chest Press','Press inclinado en Smith']},
+  seated_row:{id:'seated_row',name:'Seated Cable Row',emoji:'🚣',startWeight:20,muscles:[{name:'Espalda',pct:85,color:'#F5A623'},{name:'Bíceps',pct:50,color:'#3B82F6'},{name:'Romboides',pct:60,color:'#A78BFA'}],tip:'Pecho erguido durante todo el movimiento. Tira hacia el ombligo. Aprieta los omóplatos al final. No te balancees.',alts:['Iso-Lateral DY Row','Máquina de remo']},
 };
 
 const SESSIONS={
@@ -1108,9 +1135,49 @@ function showRpeSuggestion(exName,msg,isUp){
   rpeSuggestionTimeout=setTimeout(()=>div.remove(),4000);
 }
 
+function showTechniqueDrawer(){
+  if(!currentSession)return;
+  const exId=getSessionExercises()[curExIdx];
+  const ex=EXERCISES[exId];
+  if(!ex)return;
+  document.getElementById('tm-emoji').textContent=ex.emoji||'🏋️';
+  document.getElementById('tm-name').textContent=ex.name;
+  document.getElementById('tm-muscles').textContent=ex.muscles?.map(m=>m.name).join(' · ')||'';
+  document.getElementById('tm-tip').textContent=ex.tip||'Sin descripción disponible.';
+  // Muscle bars
+  document.getElementById('tm-muscle-bars').innerHTML=(ex.muscles||[]).map(m=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+      <div style="font-size:11px;color:var(--muted);width:120px;flex-shrink:0">${m.name}</div>
+      <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="width:${m.pct}%;height:100%;background:${m.color};border-radius:3px"></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);width:30px;text-align:right">${m.pct}%</div>
+    </div>`).join('');
+  // Alts
+  const alts=ex.alts||[];
+  document.getElementById('tm-alts').innerHTML=alts.length
+    ?`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">Si está ocupada</div>
+       <div style="display:flex;flex-wrap:wrap;gap:6px">${alts.map(a=>`<span style="background:var(--blue-bg);border:1px solid rgba(59,130,246,.3);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--blue);font-weight:600">${a}</span>`).join('')}</div>`
+    :'';
+  document.getElementById('technique-modal').classList.add('show');
+}
+
 function skipCurrentExercise(){
-  // Skip without marking as done — just advance index
   const exIds=getSessionExercises();
+  const exId=exIds[curExIdx];
+  const ex=EXERCISES[exId];
+  // Check if this muscle is already covered by done exercises
+  const doneMuscles=exIds.slice(0,curExIdx)
+    .filter(id=>currentSets[id]?.some(s=>s!==null))
+    .flatMap(id=>EXERCISES[id]?.muscles?.map(m=>m.name)||[]);
+  const exMuscles=ex?.muscles?.map(m=>m.name)||[];
+  const covered=exMuscles.some(m=>doneMuscles.includes(m));
+  const msg=covered
+    ?`¿Saltar ${ex?.name}? Los músculos que trabaja (${exMuscles[0]}) ya están cubiertos por ejercicios anteriores. Es seguro saltarlo.`
+    :`¿Saltar ${ex?.name}? Los músculos que trabaja (${exMuscles.join(', ')}) NO han sido trabajados aún hoy.`;
+  if(!confirm(msg))return;
+  skippedExercises[exId]=today();
+  save('gg_skipped',skippedExercises);
   curExIdx++;
   if(curExIdx>=exIds.length){endWorkout();return;}
   renderCurrentExercise();
@@ -1838,11 +1905,11 @@ function showAddSessionModal(){
   document.getElementById('asm-date').value=today();
   document.getElementById('asm-dur').value='40';
   document.querySelectorAll('#asm-type-btns button').forEach((b,i)=>{
-    const types=['upper','lower','full'];
     b.style.background=i===0?'var(--amber)':'var(--surface)';
     b.style.color=i===0?'#0D0F14':'var(--text)';
     b.style.borderColor=i===0?'var(--amber)':'var(--border)';
   });
+  renderAsmExercises();
   document.getElementById('add-session-modal').classList.add('show');
 }
 
@@ -1852,14 +1919,47 @@ function setAsmType(type,btn){
     b.style.background='var(--surface)';b.style.color='var(--text)';b.style.borderColor='var(--border)';
   });
   btn.style.background='var(--amber)';btn.style.color='#0D0F14';btn.style.borderColor='var(--amber)';
+  renderAsmExercises();
+}
+
+function renderAsmExercises(){
+  const sess=SESSIONS[asmType];
+  const exList=sess.exercises;
+  document.getElementById('asm-exercises').innerHTML=exList.map((exCfg,i)=>{
+    const id=exCfg.id||exCfg;
+    const ex=EXERCISES[id];
+    if(!ex)return'';
+    const w=getCurrentWeight(id);
+    const defaultSeries=exCfg.seriesRange?exCfg.seriesRange[0]:3;
+    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <input type="checkbox" id="asm-cb-${i}" checked style="accent-color:var(--amber);width:18px;height:18px;flex-shrink:0">
+      <div style="flex:1">
+        <label for="asm-cb-${i}" style="font-size:13px;font-weight:600;cursor:pointer">${ex.name}</label>
+        <div style="font-size:11px;color:var(--muted)">${w}kg · ${exCfg.required===false?'Opcional':'Obligatorio'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input type="number" id="asm-s-${i}" value="${defaultSeries}" min="0" max="5" style="width:36px;padding:4px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+        <span style="font-size:11px;color:var(--muted)">series</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function saveAddSession(){
   const date=document.getElementById('asm-date').value||today();
   const dur=(parseInt(document.getElementById('asm-dur').value)||40)*60;
   const sess=SESSIONS[asmType];
-  // Add with default weights from current history
-  const exercises=sess.exercises.map(exCfg=>{const id=exCfg.id||exCfg;return{id,weight:getSuggestedWeight(id)||getCurrentWeight(id),sets:Array.from({length:3},()=>({reps:10,rpe:1}))};});
+  const exercises=sess.exercises.map((exCfg,i)=>{
+    const id=exCfg.id||exCfg;
+    const cb=document.getElementById('asm-cb-'+i);
+    if(cb&&!cb.checked)return null;// skipped
+    const seriesCount=parseInt(document.getElementById('asm-s-'+i)?.value)||3;
+    if(seriesCount===0)return null;
+    const w=getSuggestedWeight(id)||getCurrentWeight(id);
+    const ex=EXERCISES[id];
+    const reps=ex?.isTime?ex.startTime:10;
+    return{id,weight:w,sets:Array.from({length:seriesCount},()=>({reps,rpe:1}))};
+  }).filter(Boolean);
   let totalKg=0;
   exercises.forEach(e=>{const ex=EXERCISES[e.id];if(ex&&!ex.isTime)totalKg+=e.sets.reduce((a,s)=>a+s.reps*e.weight,0);});
   gymSessions.push({date,type:asmType,duration:dur,totalKg,exercises});
